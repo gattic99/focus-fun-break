@@ -6,7 +6,7 @@ const getBackendUrl = () => {
   // In production, you would use your deployed backend URL
   // For development, we can use a local server
   if (process.env.NODE_ENV === 'production') {
-    return 'https://your-deployed-api.com'; // REPLACE THIS with your actual deployed backend URL
+    return 'https://your-deployed-api.com'; // REPLACE THIS with your actual deployed backend URL when you have it
   }
   return 'http://localhost:3000'; // Local development server
 };

@@ -14,6 +14,12 @@ const PORT = process.env.PORT || 3000;
 app.use(cors()); // Enable CORS for all origins in development
 app.use(express.json());
 
+// Check if OpenAI API key is configured
+if (!process.env.OPENAI_API_KEY) {
+  console.error('OPENAI_API_KEY is not set in the environment variables');
+  process.exit(1);
+}
+
 // Configure OpenAI
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
