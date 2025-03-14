@@ -1,11 +1,10 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Bot, X, PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
-import { getAIResponse } from "@/utils/openaiUtils";
+import { getAIResponse, validateApiKey } from "@/utils/openaiUtils";
 import { toast } from "sonner";
 import ChatHistory, { ChatConversation } from "./ChatHistory";
 import { v4 as uuidv4 } from 'uuid';
@@ -49,6 +48,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Silently check API availability without showing errors to user
+  useEffect(() => {
+    validateApiKey().catch(() => {
+      // Silently fail - we'll use fallback responses when needed
+      console.log("Using fallback AI responses");
+    });
+  }, []);
 
   useEffect(() => {
     const storedConversations = localStorage.getItem(STORAGE_KEY);

@@ -1,10 +1,12 @@
-
 import { toast } from "sonner";
 
 // Determine the backend API URL based on environment
 const getBackendUrl = () => {
-  // Use a deployed backend URL for all environments
-  // We're using a free serverless API service for demonstration
+  // First check if we're in development mode, use localhost if so
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000';
+  }
+  // Otherwise use the deployed backend
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -37,10 +39,14 @@ export const isApiKeyValidated = (): boolean => {
 export const validateApiKey = async (): Promise<boolean> => {
   // Check if our backend API is available
   try {
-    const response = await fetch(`${getBackendUrl()}/api/health`);
+    const response = await fetch(`${getBackendUrl()}/api/health`, {
+      // Adding timeout to avoid long waits on network errors
+      signal: AbortSignal.timeout(5000)
+    });
     return response.ok;
   } catch (error) {
     console.error("Error checking backend health:", error);
+    toast.error("AI service currently unavailable. Using offline responses.");
     return false;
   }
 };
@@ -72,7 +78,9 @@ export const getAIResponse = async (message: string): Promise<string> => {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message }),
+      // Adding timeout to avoid long waits
+      signal: AbortSignal.timeout(10000)
     });
 
     if (!response.ok) {
