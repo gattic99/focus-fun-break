@@ -2,11 +2,23 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { TimerMode, TimerState, BreakActivity, TimerSettings } from "@/types";
 import { toast } from "sonner";
 import { minutesToSeconds } from "@/utils/timerUtils";
-import { isExtensionContext, getExtensionURL } from "@/utils/chromeUtils";
+import { 
+  isExtensionContext, 
+  getExtensionURL, 
+  saveToLocalStorage,
+  getFromLocalStorage,
+  listenForStateChanges,
+  playSingleAudio
+} from "@/utils/chromeUtils";
+import { v4 as uuidv4 } from 'uuid';
 
 interface UseTimerProps {
   settings: TimerSettings;
 }
+
+// Timer state keys for storage
+const TIMER_STATE_KEY = "focusflow_timer_state";
+const TIMER_LAST_UPDATE_KEY = "focusflow_timer_last_update";
 
 export const useTimer = ({ settings }: UseTimerProps) => {
   const [timerState, setTimerState] = useState<TimerState>({
@@ -20,6 +32,9 @@ export const useTimer = ({ settings }: UseTimerProps) => {
   const intervalRef = useRef<number | null>(null);
   const breakAudioRef = useRef<HTMLAudioElement | null>(null);
   const focusAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Keep track of when the state last changed
+  const lastUpdateRef = useRef<number>(Date.now());
 
   // Initialize audio
   useEffect(() => {
@@ -37,6 +52,94 @@ export const useTimer = ({ settings }: UseTimerProps) => {
     };
   }, []);
 
+  // Load initial timer state from storage
+  useEffect(() => {
+    const loadStoredTimerState = async () => {
+      if (!isExtensionContext()) return;
+      
+      try {
+        const storedState = await getFromLocalStorage<TimerState>(TIMER_STATE_KEY);
+        const lastUpdate = await getFromLocalStorage<number>(TIMER_LAST_UPDATE_KEY);
+        
+        if (storedState && lastUpdate) {
+          // Adjust remaining time based on how long it's been since the last update
+          if (storedState.isRunning) {
+            const elapsedSeconds = Math.floor((Date.now() - lastUpdate) / 1000);
+            storedState.timeRemaining = Math.max(0, storedState.timeRemaining - elapsedSeconds);
+            
+            // Check if timer would have completed while we were away
+            if (storedState.timeRemaining <= 0) {
+              // Handle timer completion
+              const nextMode = storedState.mode === 'focus' ? 'break' : 'focus';
+              const nextDuration = nextMode === 'focus' 
+                ? minutesToSeconds(settings.focusDuration)
+                : minutesToSeconds(settings.breakDuration);
+                
+              storedState.mode = nextMode;
+              storedState.timeRemaining = nextDuration;
+              storedState.isRunning = false;
+              storedState.completed = true;
+              
+              // Don't play sounds automatically when restoring state
+            }
+          }
+          
+          setTimerState(storedState);
+          lastUpdateRef.current = Date.now();
+        }
+      } catch (error) {
+        console.error("Error loading timer state:", error);
+      }
+    };
+    
+    loadStoredTimerState();
+  }, [settings.focusDuration, settings.breakDuration]);
+  
+  // Listen for timer state changes from other tabs
+  useEffect(() => {
+    const unsubscribe = listenForStateChanges((key, value) => {
+      if (key === TIMER_STATE_KEY && value) {
+        setTimerState(value);
+        
+        // If timer is running, stop our local interval as another tab is managing it
+        if (value.isRunning && intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        
+        // If timer just completed, handle sound
+        if (value.completed && !timerState.completed) {
+          if (value.mode === 'focus') {
+            playSingleAudio(focusAudioRef.current, 'focus_complete');
+            toast("Break complete! Ready to focus again?");
+          } else {
+            playSingleAudio(breakAudioRef.current, 'break_complete');
+            toast("Focus session complete! Time for a break.");
+          }
+        }
+      }
+    });
+    
+    return unsubscribe;
+  }, [timerState]);
+
+  // Save timer state when it changes
+  useEffect(() => {
+    const saveTimerState = async () => {
+      if (!isExtensionContext()) return;
+      
+      try {
+        await saveToLocalStorage(TIMER_STATE_KEY, timerState);
+        await saveToLocalStorage(TIMER_LAST_UPDATE_KEY, Date.now());
+        lastUpdateRef.current = Date.now();
+      } catch (error) {
+        console.error("Error saving timer state:", error);
+      }
+    };
+    
+    saveTimerState();
+  }, [timerState]);
+
   const resetTimer = useCallback(
     (mode: TimerMode) => {
       if (intervalRef.current) {
@@ -44,7 +147,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
         intervalRef.current = null;
       }
 
-      setTimerState({
+      const newState = {
         mode,
         timeRemaining:
           mode === "focus"
@@ -53,7 +156,9 @@ export const useTimer = ({ settings }: UseTimerProps) => {
         isRunning: false,
         breakActivity: null,
         completed: false,
-      });
+      };
+      
+      setTimerState(newState);
     },
     [settings.focusDuration, settings.breakDuration]
   );
@@ -66,7 +171,8 @@ export const useTimer = ({ settings }: UseTimerProps) => {
       resetTimer(timerState.mode);
     }
 
-    setTimerState((prev) => ({ ...prev, isRunning: true }));
+    const newState = { ...timerState, isRunning: true, completed: false };
+    setTimerState(newState);
 
     // Clear any existing interval before setting a new one
     if (intervalRef.current) {
@@ -81,15 +187,9 @@ export const useTimer = ({ settings }: UseTimerProps) => {
             intervalRef.current = null;
           }
 
-          // Play notification sound when timer completes
+          // Play notification sound when timer completes, but only from one tab
           if (prev.mode === "focus") {
-            if (breakAudioRef.current) {
-              breakAudioRef.current
-                .play()
-                .catch((err) =>
-                  console.error("Error playing break audio:", err)
-                );
-            }
+            playSingleAudio(breakAudioRef.current, 'break_start');
             toast("Focus session complete! Time for a break.");
 
             // Switch to break mode
@@ -101,11 +201,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
               completed: true,
             };
           } else {
-            if (focusAudioRef.current) {
-              focusAudioRef.current
-                .play()
-                .catch((err) => console.error("Error playing audio:", err));
-            }
+            playSingleAudio(focusAudioRef.current, 'focus_start');
             toast("Break complete! Ready to focus again?");
 
             // Switch to focus mode

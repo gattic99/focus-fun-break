@@ -8,6 +8,7 @@ import { getAIResponse, validateApiKey } from "@/utils/openaiUtils";
 import { toast } from "sonner";
 import ChatHistory, { ChatConversation } from "./ChatHistory";
 import { v4 as uuidv4 } from 'uuid';
+import { isExtensionContext, saveToLocalStorage, getFromLocalStorage, listenForStateChanges } from "@/utils/chromeUtils";
 
 interface ChatInterfaceProps {
   isOpen: boolean;
@@ -63,11 +64,60 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, []);
 
   useEffect(() => {
-    const storedConversations = localStorage.getItem(STORAGE_KEY);
-    if (storedConversations) {
+    const loadStoredConversations = async () => {
       try {
-        const parsedConversations = JSON.parse(storedConversations);
-        const conversations = parsedConversations.map((conv: any) => ({
+        if (isExtensionContext()) {
+          const storedConversations = await getFromLocalStorage<ChatConversation[]>(STORAGE_KEY);
+          if (storedConversations && storedConversations.length > 0) {
+            const parsedConversations = storedConversations.map((conv: any) => ({
+              ...conv,
+              createdAt: new Date(conv.createdAt),
+              messages: conv.messages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+              }))
+            }));
+            
+            setConversations(parsedConversations);
+            setActiveConversationId(parsedConversations[0].id);
+            return;
+          }
+        }
+        
+        const storedConversations = localStorage.getItem(STORAGE_KEY);
+        if (storedConversations) {
+          try {
+            const parsedConversations = JSON.parse(storedConversations);
+            const conversations = parsedConversations.map((conv: any) => ({
+              ...conv,
+              createdAt: new Date(conv.createdAt),
+              messages: conv.messages.map((msg: any) => ({
+                ...msg,
+                timestamp: new Date(msg.timestamp)
+              }))
+            }));
+            
+            setConversations(conversations);
+            
+            if (conversations.length > 0) {
+              setActiveConversationId(conversations[0].id);
+            }
+          } catch (e) {
+            console.error("Error parsing stored conversations:", e);
+          }
+        }
+      } catch (error) {
+        console.error("Error loading conversations:", error);
+      }
+    };
+    
+    loadStoredConversations();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = listenForStateChanges((key, value) => {
+      if (key === STORAGE_KEY && value) {
+        const syncedConversations = value.map((conv: any) => ({
           ...conv,
           createdAt: new Date(conv.createdAt),
           messages: conv.messages.map((msg: any) => ({
@@ -75,20 +125,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             timestamp: new Date(msg.timestamp)
           }))
         }));
-        setConversations(conversations);
         
-        if (conversations.length > 0) {
-          setActiveConversationId(conversations[0].id);
+        setConversations(syncedConversations);
+        
+        if (activeConversationId && !syncedConversations.find(c => c.id === activeConversationId)) {
+          setActiveConversationId(syncedConversations.length > 0 ? syncedConversations[0].id : null);
         }
-      } catch (e) {
-        console.error("Error parsing stored conversations:", e);
       }
-    }
-  }, []);
+    });
+    
+    return unsubscribe;
+  }, [activeConversationId]);
 
   useEffect(() => {
     if (conversations.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+      if (isExtensionContext()) {
+        saveToLocalStorage(STORAGE_KEY, conversations);
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
+      }
     }
   }, [conversations]);
 
