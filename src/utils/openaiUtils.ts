@@ -1,12 +1,9 @@
+
 import { toast } from "sonner";
 
-// Determine the backend API URL based on environment
+// Always use the deployed backend API URL
 const getBackendUrl = () => {
-  // First check if we're in development mode, use localhost if so
-  if (import.meta.env.DEV) {
-    return 'http://localhost:3000';
-  }
-  // Otherwise use the deployed backend
+  // Always use the deployed backend regardless of environment
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -46,7 +43,7 @@ export const validateApiKey = async (): Promise<boolean> => {
     return response.ok;
   } catch (error) {
     console.error("Error checking backend health:", error);
-    toast.error("AI service currently unavailable. Using offline responses.");
+    // Don't show error toast during initial silent check
     return false;
   }
 };
@@ -73,7 +70,19 @@ export const getAIResponse = async (message: string): Promise<string> => {
 
   try {
     // Call our secure backend instead of OpenAI directly
-    const response = await fetch(`${getBackendUrl()}/api/chat`, {
+    const response = await fetch(`${getBackendUrl()}/api/health`, {
+      // Quick check if API is available before sending actual request
+      method: "GET",
+      signal: AbortSignal.timeout(2000)
+    });
+    
+    if (!response.ok) {
+      // If health check fails, return fallback without showing error
+      return getFallbackResponse(message);
+    }
+    
+    // If health check passes, proceed with actual request
+    const chatResponse = await fetch(`${getBackendUrl()}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -83,13 +92,13 @@ export const getAIResponse = async (message: string): Promise<string> => {
       signal: AbortSignal.timeout(10000)
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
+    if (!chatResponse.ok) {
+      const errorData = await chatResponse.text();
       console.warn("Backend API error:", errorData);
       return getFallbackResponse(message);
     }
 
-    const data = await response.json();
+    const data = await chatResponse.json();
     return data.content;
   } catch (error) {
     console.error("Error fetching AI response:", error);

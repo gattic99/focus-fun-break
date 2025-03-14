@@ -23,7 +23,6 @@ const getInitialWelcomeMessage = (): ChatMessageProps => ({
 });
 
 const getChatTitle = (content: string): string => {
-  // Create a title from the first message content
   const maxLength = 30;
   const title = content.length > maxLength
     ? content.substring(0, maxLength) + "..."
@@ -41,7 +40,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   
-  // Define activeConversation before it's used in useEffect
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
   
@@ -49,12 +47,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  // Silently check API availability without showing errors to user
   useEffect(() => {
-    validateApiKey().catch(() => {
-      // Silently fail - we'll use fallback responses when needed
-      console.log("Using fallback AI responses");
-    });
+    const checkApiStatus = async () => {
+      try {
+        const isAvailable = await validateApiKey();
+        if (!isAvailable) {
+          console.log("AI service unavailable - using fallback responses");
+        }
+      } catch (error) {
+        console.log("Error checking API status:", error);
+      }
+    };
+    
+    checkApiStatus();
   }, []);
 
   useEffect(() => {
@@ -87,7 +92,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [conversations]);
 
-  // If there are no conversations, create one with a welcome message
   useEffect(() => {
     if (conversations.length === 0) {
       createNewConversation();
@@ -209,14 +213,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       
       const errorMessage: ChatMessageProps = {
         role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
+        content: "I'm having trouble connecting to my knowledge base right now. Let me answer with what I know.",
         timestamp: new Date(),
       };
       
       updateConversationMessages(activeConversationId!, [...updatedMessages, errorMessage]);
       
       if (errorCount >= 2) {
-        toast.error("There appears to be an issue with the AI service. You can continue using other features while this is resolved.");
+        toast.info("Using offline AI responses for now.");
       }
     } finally {
       setIsLoading(false);
