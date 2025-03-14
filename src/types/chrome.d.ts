@@ -15,6 +15,12 @@ interface Chrome {
       description: string;
       [key: string]: any;
     };
+    // Add missing messaging APIs
+    sendMessage(message: any, responseCallback?: (response: any) => void): void;
+    onMessage: {
+      addListener(callback: (message: any, sender: MessageSender, sendResponse: (response?: any) => void) => boolean | void): void;
+      removeListener(callback: (message: any, sender: MessageSender, sendResponse: (response?: any) => void) => boolean | void): void;
+    };
   };
   storage: {
     sync: {
@@ -30,6 +36,22 @@ interface Chrome {
       clear(callback?: () => void): void;
     };
   };
+  tabs?: {
+    query(queryInfo: object, callback: (tabs: any[]) => void): void;
+    sendMessage(tabId: number, message: any, responseCallback?: (response: any) => void): void;
+  };
+}
+
+// Add MessageSender interface
+interface MessageSender {
+  tab?: {
+    id?: number;
+    url?: string;
+  };
+  frameId?: number;
+  id?: string;
+  url?: string;
+  tlsChannelId?: string;
 }
 
 declare global {
@@ -38,6 +60,7 @@ declare global {
     hasRun?: boolean;
   }
   var chrome: Chrome | undefined;
+  var tabId: string;
 }
 
 export {};
