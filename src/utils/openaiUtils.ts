@@ -8,16 +8,14 @@ const getBackendUrl = () => {
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
-// Add a flag to localStorage to track if API key has been validated
+// These functions are kept for backward compatibility but are now simplified
 export const getApiKey = (): string | null => {
-  // We're no longer using the API key directly in the frontend
-  // This is kept for backward compatibility
-  return null;
+  return null; // No API key needed in frontend anymore
 };
 
 export const setApiKey = (key: string): void => {
-  // This function is no longer needed but kept for backward compatibility
-  toast.info("The API key is now managed securely on the server.");
+  // No longer storing API key in frontend
+  toast.info("AI chat is now available to all users without needing an API key.");
 };
 
 export const clearApiKey = (): void => {
@@ -26,15 +24,13 @@ export const clearApiKey = (): void => {
   localStorage.removeItem("openai_api_key_validated");
 };
 
-// Set a flag when API key is validated
 export const setApiKeyValidated = (isValid: boolean): void => {
-  // The validation now happens on the server
-  localStorage.setItem("openai_api_key_validated", isValid ? "true" : "false");
+  // The backend handles API key validation
+  localStorage.setItem("openai_api_key_validated", "true"); // Always assume it's valid
 };
 
-// Check if API key has been validated before
 export const isApiKeyValidated = (): boolean => {
-  // We'll assume the backend API key is valid
+  // We'll always return true since the backend handles authentication
   return true;
 };
 

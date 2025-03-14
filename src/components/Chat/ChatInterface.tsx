@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Send, Bot, X, PlusCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
-import { getAIResponse, validateApiKey } from "@/utils/openaiUtils";
+import { getAIResponse } from "@/utils/openaiUtils";
 import { toast } from "sonner";
 import ChatHistory, { ChatConversation } from "./ChatHistory";
 import { v4 as uuidv4 } from 'uuid';
@@ -41,7 +41,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
-  const [isApiAvailable, setIsApiAvailable] = useState(true);
   
   // Define activeConversation before it's used in useEffect
   const activeConversation = conversations.find(c => c.id === activeConversationId);
@@ -50,20 +49,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  // Check if our backend is available
-  useEffect(() => {
-    const checkApiAvailability = async () => {
-      const isAvailable = await validateApiKey();
-      setIsApiAvailable(isAvailable);
-      
-      if (!isAvailable) {
-        toast.error("AI service is currently unavailable. Falling back to basic responses.");
-      }
-    };
-    
-    checkApiAvailability();
-  }, []);
 
   useEffect(() => {
     const storedConversations = localStorage.getItem(STORAGE_KEY);
