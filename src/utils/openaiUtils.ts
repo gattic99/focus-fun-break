@@ -3,12 +3,9 @@ import { toast } from "sonner";
 
 // Determine the backend API URL based on environment
 const getBackendUrl = () => {
-  // In production, you would use your deployed backend URL
-  // For development, we can use a local server
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://your-deployed-api.com'; // REPLACE THIS with your actual deployed backend URL when you have it
-  }
-  return 'http://localhost:3000'; // Local development server
+  // Use a deployed backend URL for all environments
+  // We're using a free serverless API service for demonstration
+  return 'https://focus-flow-ai-backend.onrender.com';
 };
 
 // Add a flag to localStorage to track if API key has been validated
