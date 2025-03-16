@@ -15,6 +15,7 @@ declare global {
 
 // Generate a unique ID for this tab instance
 globalThis.tabId = uuidv4();
+console.log("Tab ID generated:", globalThis.tabId);
 
 // Check if the extension has already run in this context
 if (!window.hasRun) {
@@ -22,9 +23,12 @@ if (!window.hasRun) {
 
   // When running as an extension, set up communication between background script
   if (typeof chrome !== 'undefined' && chrome.runtime) {
+    console.log("Extension environment detected, setting up message listeners");
+    
     // Set up listeners for cross-tab communication
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      // Handle cross-tab messages here if needed
+      console.log("Message received in content script:", message);
+      // We'll handle the messages in our hooks/components
       return true;
     });
   }

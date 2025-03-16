@@ -15,7 +15,7 @@ interface Chrome {
       description: string;
       [key: string]: any;
     };
-    // Add missing messaging APIs
+    // Add messaging APIs
     sendMessage(message: any, responseCallback?: (response: any) => void): void;
     onMessage: {
       addListener(callback: (message: any, sender: MessageSender, sendResponse: (response?: any) => void) => boolean | void): void;
@@ -42,7 +42,7 @@ interface Chrome {
   };
 }
 
-// Add MessageSender interface
+// Define MessageSender interface
 interface MessageSender {
   tab?: {
     id?: number;
