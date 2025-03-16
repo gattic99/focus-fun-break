@@ -112,7 +112,7 @@ export const broadcastStateChange = (key: string, value: any): void => {
 export const listenForStateChanges = (callback: (key: string, value: any) => void): (() => void) => {
   if (!isExtensionContext()) return () => {};
   
-  const listener = (message: any, sender: MessageSender) => {
+  const listener = (message: any, sender: MessageSender, sendResponse: (response?: any) => void) => {
     // Skip messages from this tab
     if (message.action === 'stateChange' && message.tabId !== globalThis.tabId) {
       callback(message.key, message.value);
