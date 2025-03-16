@@ -43,7 +43,7 @@ interface Chrome {
 }
 
 // Define MessageSender interface
-interface MessageSender {
+export interface MessageSender {
   tab?: {
     id?: number;
     url?: string;

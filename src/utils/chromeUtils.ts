@@ -1,6 +1,8 @@
 
 // Utility functions for Chrome extension functionality
 
+import { MessageSender } from "../types/chrome";
+
 /**
  * Safely checks if the app is running in a Chrome extension context
  */
