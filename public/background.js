@@ -14,6 +14,21 @@ chrome.runtime.onInstalled.addListener(() => {
       });
     }
   });
+  
+  // Initialize with focus mode by default
+  chrome.storage.local.get(['focusflow_timer_state'], function(result) {
+    if (!result.focusflow_timer_state) {
+      chrome.storage.local.set({
+        'focusflow_timer_state': {
+          mode: "focus",
+          timeRemaining: 25 * 60, // 25 minutes in seconds
+          isRunning: false,
+          breakActivity: null,
+          completed: false
+        }
+      });
+    }
+  });
 });
 
 // Cache to track recent messages to avoid duplicates
@@ -52,6 +67,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
   });
   
+  // For stateChange messages, also update any other content scripts that might be starting up
+  if (message.key === 'focusflow_timer_state') {
+    chrome.storage.local.set({
+      [message.key]: message.value,
+      'focusflow_timer_last_update': Date.now()
+    });
+  }
+  
   // Return true to indicate you want to send a response asynchronously
   return true;
 });
@@ -75,7 +98,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-// Clean up old audio flags periodically
+// Clean up old audio flags more frequently
 setInterval(() => {
   const ONE_MINUTE = 60 * 1000;
   
@@ -97,4 +120,29 @@ setInterval(() => {
       chrome.storage.local.remove(audioKeys);
     }
   });
-}, 5 * 60 * 1000); // Run every 5 minutes
+}, 1 * 60 * 1000); // Run every minute instead of 5 minutes
+
+// Add a listener for when a new tab is created to ensure timer state is propagated
+chrome.tabs.onCreated.addListener(() => {
+  // Get the latest timer state and broadcast it to all tabs
+  chrome.storage.local.get(['focusflow_timer_state'], function(result) {
+    if (result.focusflow_timer_state) {
+      // Broadcast latest state to all tabs
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: 'stateChange',
+              key: 'focusflow_timer_state',
+              value: result.focusflow_timer_state,
+              timestamp: Date.now(),
+              tabId: 'background'
+            }).catch(() => {
+              // Ignore errors for tabs where content script isn't running yet
+            });
+          }
+        });
+      });
+    }
+  });
+});

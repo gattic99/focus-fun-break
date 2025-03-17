@@ -18,21 +18,26 @@ declare global {
 globalThis.tabId = uuidv4();
 console.log("Tab ID generated:", globalThis.tabId);
 
-// Create a more efficient initialization process
+// More efficient initialization process with proper performance optimizations
 const initializeExtension = () => {
   // Skip if already initialized
   if (window.focusflowLoaded) return;
   window.focusflowLoaded = true;
   
+  console.log(`[FocusFlow] Initializing extension in tab ${globalThis.tabId}`);
+  
   // When running as an extension, set up communication between background script
   if (typeof chrome !== 'undefined' && chrome.runtime) {
-    console.log("Extension environment detected, setting up message listeners");
+    console.log("[FocusFlow] Extension environment detected, setting up message listeners");
     
-    // Set up listeners for cross-tab communication
+    // Set up listeners for cross-tab communication with error handling
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Only process messages we care about
       if (message.action === 'stateChange' || message.action === 'playAudio') {
-        console.log("Message received in content script:", message);
+        // Only log important messages
+        if (message.key === 'focusflow_timer_state') {
+          console.log(`[FocusFlow] Timer state received: mode=${message.value?.mode}, running=${message.value?.isRunning}`);
+        }
       }
       return true;
     });
@@ -41,31 +46,50 @@ const initializeExtension = () => {
   // Create container with visibility hidden initially for smoother rendering
   const appContainer = document.createElement("div");
   appContainer.id = "chrome-extension-root";
-  appContainer.style.visibility = "hidden"; 
+  appContainer.style.visibility = "hidden";
+  appContainer.style.position = "fixed";  // Use fixed positioning
+  appContainer.style.zIndex = "2147483647";  // Maximum z-index
   document.body.appendChild(appContainer);
 
-  // Render with a slight delay to ensure minimum impact on page load
+  // Render with reduced layout thrashing and better performance
   setTimeout(() => {
     const rootElement = document.getElementById("chrome-extension-root");
     if (rootElement) {
-      createRoot(rootElement).render(<App />);
-      // Show UI only after it's rendered
-      setTimeout(() => {
-        appContainer.style.visibility = "visible";
-      }, 100);
+      console.log("[FocusFlow] Rendering app");
+      
+      // Use a try-catch to prevent the entire content script from failing
+      try {
+        createRoot(rootElement).render(<App />);
+        
+        // Show UI only after it's rendered, with a smoother fade-in
+        setTimeout(() => {
+          appContainer.style.transition = "opacity 0.3s ease-in-out";
+          appContainer.style.opacity = "0";
+          appContainer.style.visibility = "visible";
+          
+          // Use RAF for smoother animation
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              appContainer.style.opacity = "1";
+            });
+          });
+        }, 100);
+      } catch (error) {
+        console.error("[FocusFlow] Error rendering app:", error);
+      }
     }
-  }, 300);
+  }, 500); // Longer delay to prevent page load impacts
 };
 
 // Check if we should initialize now or wait
 if (!window.hasRun) {
   window.hasRun = true;
   
-  // Use requestIdleCallback if available to run during browser idle time
+  // Use requestIdleCallback with a timeout fallback to ensure it runs during browser idle time
   if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => initializeExtension());
+    window.requestIdleCallback(() => initializeExtension(), { timeout: 2000 });
   } else {
-    // Fallback to setTimeout with a delay
-    setTimeout(initializeExtension, 500);
+    // Fallback to setTimeout with a longer delay for slower devices
+    setTimeout(initializeExtension, 1000);
   }
 }

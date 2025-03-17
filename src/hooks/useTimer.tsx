@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimerMode, TimerState, BreakActivity, TimerSettings } from "@/types";
 import { toast } from "sonner";
@@ -21,6 +22,7 @@ const TIMER_STATE_KEY = "focusflow_timer_state";
 const TIMER_LAST_UPDATE_KEY = "focusflow_timer_last_update";
 
 export const useTimer = ({ settings }: UseTimerProps) => {
+  // Always initialize with focus mode
   const [timerState, setTimerState] = useState<TimerState>({
     mode: "focus",
     timeRemaining: minutesToSeconds(settings.focusDuration),
@@ -36,16 +38,26 @@ export const useTimer = ({ settings }: UseTimerProps) => {
   // Keep track of when the state last changed
   const lastUpdateRef = useRef<number>(Date.now());
 
-  // Initialize audio
+  // Initialize audio with lower volume and lazy loading
   useEffect(() => {
-    breakAudioRef.current = new Audio(
-      getExtensionURL("/assets/time-for-break.mp3")
-    );
-    focusAudioRef.current = new Audio(
-      getExtensionURL("/assets/time-for-focus.mp3")
-    );
+    // Lazy initialize audio elements
+    const initAudio = () => {
+      if (!breakAudioRef.current) {
+        breakAudioRef.current = new Audio(getExtensionURL("/assets/time-for-break.mp3"));
+        breakAudioRef.current.volume = 0.7; // Lower volume
+      }
+      
+      if (!focusAudioRef.current) {
+        focusAudioRef.current = new Audio(getExtensionURL("/assets/time-for-focus.mp3"));
+        focusAudioRef.current.volume = 0.7; // Lower volume
+      }
+    };
+    
+    // Delay audio initialization
+    const timeoutId = setTimeout(initAudio, 1000);
 
     return () => {
+      clearTimeout(timeoutId);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -79,16 +91,34 @@ export const useTimer = ({ settings }: UseTimerProps) => {
               storedState.timeRemaining = nextDuration;
               storedState.isRunning = false;
               storedState.completed = true;
-              
-              // Don't play sounds automatically when restoring state
             }
           }
           
-          setTimerState(storedState);
+          // If no stored state or if it's in a completed break state, reset to focus mode
+          if (!storedState || (storedState.mode === 'break' && storedState.completed)) {
+            setTimerState({
+              mode: "focus",
+              timeRemaining: minutesToSeconds(settings.focusDuration),
+              isRunning: false,
+              breakActivity: null,
+              completed: false,
+            });
+          } else {
+            setTimerState(storedState);
+          }
+          
           lastUpdateRef.current = Date.now();
         }
       } catch (error) {
         console.error("Error loading timer state:", error);
+        // Fallback to focus mode on error
+        setTimerState({
+          mode: "focus",
+          timeRemaining: minutesToSeconds(settings.focusDuration),
+          isRunning: false,
+          breakActivity: null,
+          completed: false,
+        });
       }
     };
     
