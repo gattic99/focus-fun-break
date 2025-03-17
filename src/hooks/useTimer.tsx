@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { TimerMode, TimerState, BreakActivity, TimerSettings } from "@/types";
 import { toast } from "sonner";
@@ -20,6 +19,7 @@ interface UseTimerProps {
 // Timer state keys for storage
 const TIMER_STATE_KEY = "focusflow_timer_state";
 const TIMER_LAST_UPDATE_KEY = "focusflow_timer_last_update";
+const SETTINGS_KEY = "focusflow_settings";
 
 export const useTimer = ({ settings }: UseTimerProps) => {
   // Always initialize with focus mode
@@ -30,6 +30,12 @@ export const useTimer = ({ settings }: UseTimerProps) => {
     breakActivity: null,
     completed: false,
   });
+
+  // Keep a ref to the current settings to avoid dependency issues in hooks
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   const intervalRef = useRef<number | null>(null);
   const breakAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -72,6 +78,12 @@ export const useTimer = ({ settings }: UseTimerProps) => {
       try {
         const storedState = await getFromLocalStorage<TimerState>(TIMER_STATE_KEY);
         const lastUpdate = await getFromLocalStorage<number>(TIMER_LAST_UPDATE_KEY);
+        const storedSettings = await getFromLocalStorage<TimerSettings>(SETTINGS_KEY);
+        
+        // Update our settings ref if we have stored settings
+        if (storedSettings) {
+          settingsRef.current = storedSettings;
+        }
         
         if (storedState && lastUpdate) {
           // Adjust remaining time based on how long it's been since the last update
@@ -84,8 +96,8 @@ export const useTimer = ({ settings }: UseTimerProps) => {
               // Handle timer completion
               const nextMode = storedState.mode === 'focus' ? 'break' : 'focus';
               const nextDuration = nextMode === 'focus' 
-                ? minutesToSeconds(settings.focusDuration)
-                : minutesToSeconds(settings.breakDuration);
+                ? minutesToSeconds(settingsRef.current.focusDuration)
+                : minutesToSeconds(settingsRef.current.breakDuration);
                 
               storedState.mode = nextMode;
               storedState.timeRemaining = nextDuration;
@@ -98,7 +110,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
           if (!storedState || (storedState.mode === 'break' && storedState.completed)) {
             setTimerState({
               mode: "focus",
-              timeRemaining: minutesToSeconds(settings.focusDuration),
+              timeRemaining: minutesToSeconds(settingsRef.current.focusDuration),
               isRunning: false,
               breakActivity: null,
               completed: false,
@@ -114,7 +126,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
         // Fallback to focus mode on error
         setTimerState({
           mode: "focus",
-          timeRemaining: minutesToSeconds(settings.focusDuration),
+          timeRemaining: minutesToSeconds(settingsRef.current.focusDuration),
           isRunning: false,
           breakActivity: null,
           completed: false,
@@ -123,10 +135,13 @@ export const useTimer = ({ settings }: UseTimerProps) => {
     };
     
     loadStoredTimerState();
-  }, [settings.focusDuration, settings.breakDuration]);
+  }, []);
   
   // Listen for timer state changes from other tabs
   useEffect(() => {
+    if (!isExtensionContext()) return;
+    
+    // Listen for timer state changes
     const unsubscribe = listenForStateChanges((key, value) => {
       if (key === TIMER_STATE_KEY && value) {
         setTimerState(value);
@@ -147,6 +162,11 @@ export const useTimer = ({ settings }: UseTimerProps) => {
             toast("Focus session complete! Time for a break.");
           }
         }
+      }
+      
+      // Listen for settings changes
+      if (key === SETTINGS_KEY && value) {
+        settingsRef.current = value;
       }
     });
     
@@ -181,8 +201,8 @@ export const useTimer = ({ settings }: UseTimerProps) => {
         mode,
         timeRemaining:
           mode === "focus"
-            ? minutesToSeconds(settings.focusDuration)
-            : minutesToSeconds(settings.breakDuration),
+            ? minutesToSeconds(settingsRef.current.focusDuration)
+            : minutesToSeconds(settingsRef.current.breakDuration),
         isRunning: false,
         breakActivity: null,
         completed: false,
@@ -190,7 +210,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
       
       setTimerState(newState);
     },
-    [settings.focusDuration, settings.breakDuration]
+    []
   );
 
   const startTimer = useCallback(() => {
@@ -226,7 +246,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
             return {
               ...prev,
               mode: "break",
-              timeRemaining: minutesToSeconds(settings.breakDuration),
+              timeRemaining: minutesToSeconds(settingsRef.current.breakDuration),
               isRunning: false,
               completed: true,
             };
@@ -238,7 +258,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
             return {
               ...prev,
               mode: "focus",
-              timeRemaining: minutesToSeconds(settings.focusDuration),
+              timeRemaining: minutesToSeconds(settingsRef.current.focusDuration),
               isRunning: false,
               breakActivity: null,
               completed: true,
@@ -258,8 +278,6 @@ export const useTimer = ({ settings }: UseTimerProps) => {
     timerState.timeRemaining,
     timerState.mode,
     resetTimer,
-    settings.breakDuration,
-    settings.focusDuration,
   ]);
 
   const pauseTimer = useCallback(() => {

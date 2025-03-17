@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Coffee, Minus, Plus, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -19,6 +19,12 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   const [tempDuration, setTempDuration] = useState<number>(breakDuration);
   const [inputValue, setInputValue] = useState<string>(breakDuration.toString());
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Update local state when prop changes
+  useEffect(() => {
+    setTempDuration(breakDuration);
+    setInputValue(breakDuration.toString());
+  }, [breakDuration]);
   
   const decreaseDuration = () => {
     if (tempDuration > 1) {
@@ -56,7 +62,8 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   };
   
   const handleSave = () => {
-    onChangeBreakDuration(tempDuration);
+    // Make sure we're passing the numeric value, not a string
+    onChangeBreakDuration(Number(tempDuration));
     setIsOpen(false);
   };
   

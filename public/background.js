@@ -68,7 +68,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   });
   
   // For stateChange messages, also update any other content scripts that might be starting up
-  if (message.key === 'focusflow_timer_state') {
+  if (message.key === 'focusflow_timer_state' || message.key === 'focusflow_settings') {
     chrome.storage.local.set({
       [message.key]: message.value,
       'focusflow_timer_last_update': Date.now()
@@ -125,12 +125,13 @@ setInterval(() => {
 // Add a listener for when a new tab is created to ensure timer state is propagated
 chrome.tabs.onCreated.addListener(() => {
   // Get the latest timer state and broadcast it to all tabs
-  chrome.storage.local.get(['focusflow_timer_state'], function(result) {
+  chrome.storage.local.get(['focusflow_timer_state', 'focusflow_settings'], function(result) {
     if (result.focusflow_timer_state) {
       // Broadcast latest state to all tabs
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach(tab => {
           if (tab.id) {
+            // Send timer state
             chrome.tabs.sendMessage(tab.id, {
               action: 'stateChange',
               key: 'focusflow_timer_state',
@@ -140,9 +141,53 @@ chrome.tabs.onCreated.addListener(() => {
             }).catch(() => {
               // Ignore errors for tabs where content script isn't running yet
             });
+            
+            // Also send settings
+            if (result.focusflow_settings) {
+              chrome.tabs.sendMessage(tab.id, {
+                action: 'stateChange',
+                key: 'focusflow_settings',
+                value: result.focusflow_settings,
+                timestamp: Date.now(),
+                tabId: 'background'
+              }).catch(() => {
+                // Ignore errors for tabs where content script isn't running yet
+              });
+            }
           }
         });
       });
     }
   });
+});
+
+// Listen for settings changes and sync them across tabs
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'updateSettings') {
+    chrome.storage.local.set({
+      'focusflow_settings': message.settings,
+      'focusflow_settings_last_update': Date.now()
+    });
+    
+    // Broadcast to all tabs
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        if (tab.id && (!sender.tab || tab.id !== sender.tab.id)) {
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'stateChange',
+            key: 'focusflow_settings',
+            value: message.settings,
+            timestamp: Date.now(),
+            tabId: 'background'
+          }).catch(() => {
+            // Ignore errors for tabs where content script isn't running yet
+          });
+        }
+      });
+    });
+    
+    sendResponse({ success: true });
+  }
+  
+  return true;
 });

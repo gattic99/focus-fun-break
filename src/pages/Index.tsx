@@ -10,11 +10,30 @@ import { X } from "lucide-react";
 import FloatingTimer from "@/components/FloatingTimer";
 import PlatformerGame from "@/components/PlatformerGame";
 import ChatBubble from "@/components/Chat/ChatBubble";
+import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
 
 const Index: React.FC = () => {
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  // Load settings from storage on initial render
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (isExtensionContext()) {
+        try {
+          const storedSettings = await getFromLocalStorage<TimerSettings>('focusflow_settings');
+          if (storedSettings) {
+            setSettings(storedSettings);
+          }
+        } catch (error) {
+          console.error("Error loading settings:", error);
+        }
+      }
+    };
+    
+    loadSettings();
+  }, []);
 
   const {
     timerState,
@@ -34,22 +53,48 @@ const Index: React.FC = () => {
     }
   }, [timerState.mode, timerState.completed]);
 
-  const handleFocusDurationChange = (newDuration: number) => {
+  const handleFocusDurationChange = async (newDuration: number) => {
     const newSettings = {
       ...settings,
       focusDuration: newDuration
     };
     setSettings(newSettings);
     updateFocusDuration(newDuration);
+    
+    // Save settings to Chrome storage and notify background script
+    if (isExtensionContext()) {
+      try {
+        await saveToLocalStorage('focusflow_settings', newSettings);
+        chrome.runtime.sendMessage({
+          action: 'updateSettings',
+          settings: newSettings
+        });
+      } catch (error) {
+        console.error("Error saving focus duration:", error);
+      }
+    }
   };
 
-  const handleBreakDurationChange = (newDuration: number) => {
+  const handleBreakDurationChange = async (newDuration: number) => {
     const newSettings = {
       ...settings,
       breakDuration: newDuration
     };
     setSettings(newSettings);
     updateBreakDuration(newDuration);
+    
+    // Save settings to Chrome storage and notify background script
+    if (isExtensionContext()) {
+      try {
+        await saveToLocalStorage('focusflow_settings', newSettings);
+        chrome.runtime.sendMessage({
+          action: 'updateSettings',
+          settings: newSettings
+        });
+      } catch (error) {
+        console.error("Error saving break duration:", error);
+      }
+    }
   };
 
   const openTimerPopup = () => {

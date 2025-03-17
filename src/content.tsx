@@ -33,10 +33,12 @@ const initializeExtension = () => {
     // Set up listeners for cross-tab communication with error handling
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Only process messages we care about
-      if (message.action === 'stateChange' || message.action === 'playAudio') {
+      if (message.action === 'stateChange') {
         // Only log important messages
         if (message.key === 'focusflow_timer_state') {
           console.log(`[FocusFlow] Timer state received: mode=${message.value?.mode}, running=${message.value?.isRunning}`);
+        } else if (message.key === 'focusflow_settings') {
+          console.log(`[FocusFlow] Settings received: focus=${message.value?.focusDuration/60}min, break=${message.value?.breakDuration/60}min`);
         }
       }
       return true;
