@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
 import { formatTime } from "@/utils/timerUtils";
 import { TimerState } from "@/types";
 import GameControls from "./GameControls";
@@ -23,6 +24,8 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const gameLoopRef = useRef<number | null>(null);
   
   const {
     gameState,
@@ -42,35 +45,49 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     initialCoins
   });
 
+  // Lazy load audio with reduced volume
   useEffect(() => {
-    try {
-      audioRef.current = new Audio(getExtensionURL('/assets/office-ambience.mp3'));
-      audioRef.current.volume = 0.3;
-      audioRef.current.loop = true;
-      audioRef.current.play().catch(error => {
-        console.error("Audio playback error:", error);
-        toast.error("Background audio couldn't be played. Try interacting with the page first.");
-      });
-      console.log("Background audio loaded successfully");
-      audioRef.current.addEventListener('canplay', () => {
-        console.log("Audio can play now");
-      });
-      audioRef.current.addEventListener('error', e => {
-        console.error("Audio error:", e);
-      });
-    } catch (error) {
-      console.error("Audio initialization error:", error);
-    }
+    const loadAudio = () => {
+      try {
+        if (!audioRef.current) {
+          audioRef.current = new Audio(getExtensionURL('/assets/office-ambience.mp3'));
+          audioRef.current.volume = 0.2;  // Lower volume
+          audioRef.current.loop = true;
+          
+          audioRef.current.addEventListener('canplay', () => {
+            console.log("Audio can play now");
+            setAudioLoaded(true);
+          });
+          
+          audioRef.current.addEventListener('error', e => {
+            console.error("Audio error:", e);
+          });
+        }
+      } catch (error) {
+        console.error("Audio initialization error:", error);
+      }
+    };
+    
+    // Delay audio loading
+    const timer = setTimeout(loadAudio, 1000);
+    
     return () => {
+      clearTimeout(timer);
       if (audioRef.current) {
-        console.log("Cleaning up audio");
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
         audioRef.current = null;
       }
+      
+      // Clean up game loop
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+        gameLoopRef.current = null;
+      }
     };
   }, []);
 
+  // Start game when component mounts
   useEffect(() => {
     setGameStarted(true);
     resetGame();
@@ -84,30 +101,62 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     };
   }, []);
 
+  // Game loop using requestAnimationFrame for better performance
   useEffect(() => {
     if (!gameStarted) return;
+    
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const gameLoop = setInterval(() => {
-      if (!gameState.gameOver) {
-        updateGame();
+    
+    // Set up game loop using requestAnimationFrame
+    let lastTimestamp = 0;
+    const targetFPS = 60;
+    const frameInterval = 1000 / targetFPS;
+    
+    const runGameLoop = (timestamp: number) => {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      
+      const elapsed = timestamp - lastTimestamp;
+      
+      if (elapsed > frameInterval) {
+        lastTimestamp = timestamp - (elapsed % frameInterval);
+        
+        if (!gameState.gameOver) {
+          updateGame();
+        }
+        renderGame(ctx);
       }
-      renderGame(ctx);
-    }, 16);
+      
+      if (gameStarted) {
+        gameLoopRef.current = requestAnimationFrame(runGameLoop);
+      }
+    };
+    
+    gameLoopRef.current = requestAnimationFrame(runGameLoop);
+    
     return () => {
-      clearInterval(gameLoop);
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+        gameLoopRef.current = null;
+      }
     };
   }, [gameStarted, gameState.gameOver, updateGame]);
 
+  // Optimized rendering function
   const renderGame = (ctx: CanvasRenderingContext2D) => {
+    // Clear canvas first
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    
     drawBackground(ctx, gameState.cameraOffsetX);
     drawPlatforms(ctx, platformsRef.current, gameState.cameraOffsetX);
     drawObstacles(ctx, obstaclesRef.current, gameState.cameraOffsetX);
     drawCollectibles(ctx, coinsRef.current, gameState.cameraOffsetX);
     drawCharacter(ctx, characterRef.current);
     drawUI(ctx, gameState, timerState.timeRemaining, timerState.mode);
+    
     if (gameState.gameOver) {
       drawGameOver(ctx, gameState.score);
     }
@@ -118,11 +167,18 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
+    
+    // Clean up game loop
+    if (gameLoopRef.current) {
+      cancelAnimationFrame(gameLoopRef.current);
+      gameLoopRef.current = null;
+    }
+    
     onReturn();
   };
 
   const handleUserInteraction = () => {
-    if (audioRef.current && audioRef.current.paused) {
+    if (audioRef.current && audioRef.current.paused && audioLoaded) {
       audioRef.current.play().catch(err => {
         console.error("Failed to play audio after interaction:", err);
       });
