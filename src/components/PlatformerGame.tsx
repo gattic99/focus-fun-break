@@ -208,7 +208,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
       physics: {
         default: 'arcade',
         arcade: {
-          gravity: { y: 300 },
+          gravity: { x: 0, y: 300 }, // Fix: Added x property to satisfy Vector2Like type
           debug: false
         }
       },
