@@ -13,7 +13,8 @@ const getBackendUrl = () => {
   }
   
   // For development and testing
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // Try the development URL first
     return DEVELOPMENT_BACKEND_URL;
   }
   
@@ -47,6 +48,9 @@ export const isApiKeyValidated = (): boolean => {
   return true;
 };
 
+// Variable to track if we're in offline mode
+let isOfflineMode = false;
+
 // Improved validation check with better error handling
 export const validateApiKey = async (): Promise<boolean> => {
   try {
@@ -55,24 +59,36 @@ export const validateApiKey = async (): Promise<boolean> => {
     console.log("Using backend URL:", backendUrl);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      console.log("Health check request timed out");
+    }, 5000);
     
     const response = await fetch(`${backendUrl}/api/health`, {
       method: 'GET',
-      signal: controller.signal
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors'
     });
     
     clearTimeout(timeoutId);
     
     if (!response.ok) {
       console.log("Backend health check failed with status:", response.status);
+      isOfflineMode = true;
       return false;
     }
     
-    console.log("Backend health check passed");
+    const data = await response.json();
+    console.log("Backend health check passed:", data);
+    isOfflineMode = false;
     return true;
   } catch (error) {
     console.error("Error checking backend health:", error);
+    isOfflineMode = true;
     // Don't show error toast during initial silent check
     return false;
   }
@@ -92,14 +108,23 @@ const fallbackResponses = [
   "Sometimes a change of environment can help refresh your focus. Have you tried working from a different location?"
 ];
 
-// Improved AI response function with better error handling and offline support
+// Improved AI response function with retry mechanism and better error handling
 export const getAIResponse = async (message: string): Promise<string> => {
   console.log("Getting AI response for:", message);
   
   // First, check if we're offline
   if (!navigator.onLine) {
-    console.log("Offline mode - using fallback response");
+    console.log("Browser is offline - using fallback response");
     return getFallbackResponse(message);
+  }
+
+  // If we're in known offline mode, do a quick validation check
+  if (isOfflineMode) {
+    const isAvailable = await validateApiKey();
+    if (!isAvailable) {
+      console.log("Still in offline mode - using fallback response");
+      return getFallbackResponse(message);
+    }
   }
 
   try {
@@ -108,15 +133,17 @@ export const getAIResponse = async (message: string): Promise<string> => {
     
     // Try to make the actual request with a reasonable timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     
     const chatResponse = await fetch(`${backendUrl}/api/chat`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
       },
       body: JSON.stringify({ message }),
-      signal: controller.signal
+      signal: controller.signal,
+      mode: 'cors'
     });
     
     clearTimeout(timeoutId);
@@ -124,15 +151,26 @@ export const getAIResponse = async (message: string): Promise<string> => {
     if (!chatResponse.ok) {
       const errorData = await chatResponse.text();
       console.warn("Backend API error:", errorData);
+      
+      // Try to validate the API again to update offline status
+      await validateApiKey();
+      
       toast.error("Unable to connect to AI service, using offline response");
       return getFallbackResponse(message);
     }
 
     const data = await chatResponse.json();
     console.log("Received response from API");
+    
+    // We successfully connected, so we're not in offline mode
+    isOfflineMode = false;
+    
     return data.content;
   } catch (error) {
     console.error("Error fetching AI response:", error);
+    
+    // Update offline status
+    isOfflineMode = true;
     
     // Only show the toast if it's not an abort error (user intentionally cancelled)
     if (!(error instanceof DOMException && error.name === "AbortError")) {
