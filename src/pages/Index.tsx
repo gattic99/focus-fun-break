@@ -14,6 +14,7 @@ import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/u
 import { toast } from "sonner";
 
 const Index: React.FC = () => {
+  // Initialize with default settings (25 min focus, 5 min break)
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -27,9 +28,12 @@ const Index: React.FC = () => {
           if (storedSettings) {
             console.log("Loaded settings from storage:", storedSettings);
             setSettings(storedSettings);
+          } else {
+            console.log("No stored settings found, using defaults:", defaultTimerSettings);
           }
         } catch (error) {
           console.error("Error loading settings:", error);
+          console.log("Using default settings instead:", defaultTimerSettings);
         }
       }
     };
