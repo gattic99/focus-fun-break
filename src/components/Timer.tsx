@@ -61,6 +61,35 @@ const Timer: React.FC<TimerProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Add control buttons directly to the timer component for consistency */}
+      {(onStart || onPause || onReset) && (
+        <div className="flex items-center justify-center gap-2 mt-2">
+          {onReset && (
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={onReset}
+              className="rounded-full h-9 w-9"
+              aria-label="Reset timer"
+            >
+              <RotateCcw size={16} />
+            </Button>
+          )}
+          
+          {(onStart && onPause) && (
+            <Button 
+              variant="default" 
+              size="icon" 
+              onClick={isRunning ? onPause : onStart}
+              className="rounded-full h-9 w-9 bg-focus-purple hover:bg-focus-purple-dark"
+              aria-label={isRunning ? "Pause timer" : "Start timer"}
+            >
+              {isRunning ? <Pause size={16} /> : <Play size={16} />}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
