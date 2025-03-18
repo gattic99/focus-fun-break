@@ -28,8 +28,13 @@ const Timer: React.FC<TimerProps> = ({
   
   // Debug log to see if timer values are updating
   useEffect(() => {
-    console.log("Timer updated: ", { timeRemaining, isRunning, mode });
-  }, [timeRemaining, isRunning, mode]);
+    console.log("Timer component rendering with:", { 
+      timeRemaining, 
+      isRunning, 
+      mode,
+      totalDuration
+    });
+  }, [timeRemaining, isRunning, mode, totalDuration]);
   
   // Always use purple regardless of mode
   const timerTextColor = 'text-focus-purple';

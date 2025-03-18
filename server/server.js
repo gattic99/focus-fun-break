@@ -36,7 +36,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const response = await openai.createChatCompletion({
-      model: "gpt-4o-mini", // Using OpenAI's latest model for best performance/cost ratio
+      model: "gpt-3.5-turbo", // Using a more reliable model
       messages: [
         { role: "system", content: "You are a helpful assistant focused on productivity and well-being. Keep your responses concise and practical." },
         { role: "user", content: message }
