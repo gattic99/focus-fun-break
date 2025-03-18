@@ -97,11 +97,18 @@ class PlayGame extends Phaser.Scene {
     this.stars.children.iterate((child) => {
       const c = child as Phaser.Physics.Arcade.Image;
       c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+      return true; // Return true to continue iteration
     });
 
     this.physics.add.collider(this.stars, this.platforms);
 
-    this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this);
+    this.physics.add.overlap(
+      this.player, 
+      this.stars, 
+      this.collectStar as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
+      undefined, 
+      this
+    );
 
     this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
 
@@ -109,7 +116,13 @@ class PlayGame extends Phaser.Scene {
 
     this.physics.add.collider(this.bombs, this.platforms);
 
-    this.physics.add.collider(this.player, this.bombs, this.hitBomb, undefined, this);
+    this.physics.add.collider(
+      this.player, 
+      this.bombs, 
+      this.hitBomb as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
+      undefined, 
+      this
+    );
   }
 
   update() {
@@ -138,7 +151,10 @@ class PlayGame extends Phaser.Scene {
     }
   }
 
-  collectStar(player: Phaser.GameObjects.GameObject, star: Phaser.GameObjects.GameObject) {
+  collectStar(
+    _player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+    star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ) {
     const s = star as Phaser.Physics.Arcade.Image;
     s.disableBody(true, true);
 
@@ -149,23 +165,28 @@ class PlayGame extends Phaser.Scene {
       this.stars.children.iterate((child) => {
         const c = child as Phaser.Physics.Arcade.Image;
         c.enableBody(true, c.x, 0, true, true);
+        return true; // Return true to continue iteration
       });
 
-      let x = (player.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
+      const playerSprite = _player as Phaser.Physics.Arcade.Sprite;
+      const x = (playerSprite.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
 
-      let bomb: Phaser.Physics.Arcade.Image = this.bombs?.create(x, 16, 'bomb');
+      const bomb = this.bombs?.create(x, 16, 'bomb') as Phaser.Physics.Arcade.Image;
       bomb.setBounce(1);
       bomb.setCollideWorldBounds(true);
       bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
     }
   }
 
-  hitBomb(player: Phaser.GameObjects.GameObject, bomb: Phaser.GameObjects.GameObject) {
+  hitBomb(
+    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
+    _bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ) {
     this.physics.pause();
 
-    this.player?.setTint(0xff0000);
-
-    this.player?.anims.play('turn');
+    const playerSprite = player as Phaser.Physics.Arcade.Sprite;
+    playerSprite.setTint(0xff0000);
+    playerSprite.anims.play('turn');
 
     this.gameOver = true;
   }
