@@ -45,21 +45,28 @@ app.post('/api/chat', async (req, res) => {
       temperature: 0.7
     });
 
+    // Add a timestamp to help with client-side caching
     return res.json({ 
-      content: response.data.choices[0].message.content 
+      content: response.data.choices[0].message.content,
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Error processing chat request:', error);
     return res.status(500).json({ 
       error: 'Error processing your request',
-      details: error.message 
+      details: error.message,
+      timestamp: new Date().toISOString()
     });
   }
 });
 
-// Health check endpoint
+// Health check endpoint with additional information
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ 
+    status: 'ok',
+    version: '1.0.1',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Start server
