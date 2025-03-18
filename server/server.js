@@ -10,8 +10,42 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Enable CORS for all origins in development
+// CORS configuration with allowed origins
+const allowedOrigins = [
+  'https://focusflow.app',
+  'https://focus-flow-ai.vercel.app',
+  'https://focus-flow-ai-backend.onrender.com',
+  'https://focus-flow-ai.netlify.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'chrome-extension://*'
+];
+
+// Enhanced CORS setup to allow requests from extension and web app
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches allowed patterns
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin === origin) return true;
+      if (allowedOrigin.endsWith('*')) {
+        const prefix = allowedOrigin.slice(0, -1);
+        return origin.startsWith(prefix);
+      }
+      return false;
+    });
+    
+    if (isAllowed) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('CORS policy violation'), false);
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Check if OpenAI API key is configured
