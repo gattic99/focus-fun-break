@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { formatTime } from "@/utils/timerUtils";
 import { TimerState } from "@/types";
 import { Pause, Play, RotateCcw, ChevronRight } from "lucide-react";
@@ -25,6 +25,11 @@ const Timer: React.FC<TimerProps> = ({
     mode,
     isRunning
   } = timerState;
+  
+  // Debug log to see if timer values are updating
+  useEffect(() => {
+    console.log("Timer updated: ", { timeRemaining, isRunning, mode });
+  }, [timeRemaining, isRunning, mode]);
   
   // Always use purple regardless of mode
   const timerTextColor = 'text-focus-purple';

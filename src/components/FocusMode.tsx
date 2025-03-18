@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Timer from "./Timer";
 import { TimerState } from "@/types";
@@ -7,6 +8,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import BreakDurationDialog from "./BreakDurationDialog";
+import { toast } from "sonner";
 
 interface FocusModeProps {
   timerState: TimerState;
@@ -33,9 +35,23 @@ const FocusMode: React.FC<FocusModeProps> = ({
   const [inputValue, setInputValue] = useState(focusDuration.toString());
   const [isBreakOpen, setIsBreakOpen] = useState(false);
   
+  // Debug logs to track timer state changes
+  useEffect(() => {
+    console.log("FocusMode timerState changed:", { 
+      isRunning: timerState.isRunning,
+      timeRemaining: timerState.timeRemaining,
+      mode: timerState.mode,
+      completed: timerState.completed
+    });
+  }, [timerState]);
+  
   useEffect(() => {
     setInputValue(focusDuration.toString());
   }, [focusDuration]);
+
+  useEffect(() => {
+    console.log("Break duration updated to:", breakDuration);
+  }, [breakDuration]);
 
   const decreaseFocusDuration = () => {
     if (focusDuration > 1) {
@@ -71,6 +87,16 @@ const FocusMode: React.FC<FocusModeProps> = ({
       e.currentTarget.blur();
     }
   };
+
+  const handleStartOrPause = () => {
+    if (timerState.isRunning) {
+      onPause();
+      toast.info("Timer paused");
+    } else {
+      onStart();
+      toast.success("Timer started");
+    }
+  };
   
   return <>
       <div className="focus-card p-4 w-full animate-scale-in bg-gray-100 bg-opacity-80 backdrop-blur-md rounded-xl shadow-md transition-all duration-300 hover:shadow-lg">
@@ -83,7 +109,13 @@ const FocusMode: React.FC<FocusModeProps> = ({
         </div>
         
         <div className="relative">
-          <Timer timerState={timerState} totalDuration={totalDuration} />
+          <Timer 
+            timerState={timerState} 
+            totalDuration={totalDuration} 
+            onStart={onStart}
+            onPause={onPause}
+            onReset={onReset}
+          />
           
           <div className="mt-0 text-center">
             <div className="flex items-center justify-center gap-2">
@@ -110,7 +142,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
             Reset <ChevronRight size={16} className="ml-1" />
           </Button>
           
-          <Button onClick={timerState.isRunning ? onPause : onStart} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
+          <Button onClick={handleStartOrPause} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
             {timerState.isRunning ? "Pause" : "Start"} <ChevronRight size={16} className="ml-1" />
           </Button>
         </div>
