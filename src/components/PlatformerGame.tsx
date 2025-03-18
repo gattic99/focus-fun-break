@@ -1,6 +1,6 @@
+
 import React, { useEffect } from 'react';
 import Phaser from 'phaser';
-import { Game, Types } from 'phaser';
 import { TimerState } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
@@ -101,7 +101,7 @@ class PlayGame extends Phaser.Scene {
 
     this.physics.add.collider(this.stars, this.platforms);
 
-    this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
+    this.physics.add.overlap(this.player, this.stars, this.collectStar, undefined, this);
 
     this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
 
@@ -109,7 +109,7 @@ class PlayGame extends Phaser.Scene {
 
     this.physics.add.collider(this.bombs, this.platforms);
 
-    this.physics.add.collider(this.player, this.bombs, this.hitBomb, null, this);
+    this.physics.add.collider(this.player, this.bombs, this.hitBomb, undefined, this);
   }
 
   update() {
@@ -138,7 +138,7 @@ class PlayGame extends Phaser.Scene {
     }
   }
 
-  private collectStar(player: Phaser.GameObjects.GameObject, star: Phaser.GameObjects.GameObject) {
+  collectStar(player: Phaser.GameObjects.GameObject, star: Phaser.GameObjects.GameObject) {
     const s = star as Phaser.Physics.Arcade.Image;
     s.disableBody(true, true);
 
@@ -157,11 +157,10 @@ class PlayGame extends Phaser.Scene {
       bomb.setBounce(1);
       bomb.setCollideWorldBounds(true);
       bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
-
     }
   }
 
-  private hitBomb(player: Phaser.GameObjects.GameObject, bomb: Phaser.GameObjects.GameObject) {
+  hitBomb(player: Phaser.GameObjects.GameObject, bomb: Phaser.GameObjects.GameObject) {
     this.physics.pause();
 
     this.player?.setTint(0xff0000);
@@ -179,7 +178,8 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   onPause
 }) => {
   useEffect(() => {
-    const config: Types.Core.GameConfig = {
+    // Define the game configuration
+    const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 800,
       height: 600,
@@ -194,8 +194,10 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
       scene: [Preloader, PlayGame]
     };
 
-    const game = new Game(config);
+    // Create and start the game
+    const game = new Phaser.Game(config);
 
+    // Clean up function to destroy the game when the component unmounts
     return () => {
       game.destroy(true);
     };
