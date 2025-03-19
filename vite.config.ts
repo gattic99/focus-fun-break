@@ -47,7 +47,12 @@ export default defineConfig(({ mode }) => ({
         entryFileNames: "[name].js",
         assetFileNames: "styles.css",
       },
+      // Add Phaser as an external dependency
+      external: ['phaser']
     },
+  },
+  optimizeDeps: {
+    include: ['phaser'],
   },
   resolve: {
     alias: {
