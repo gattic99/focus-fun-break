@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, X, PlusCircle } from "lucide-react";
+import { Send, Bot, X, PlusCircle, Wifi, WifiOff } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
 import { getAIResponse, validateApiKey } from "@/utils/openaiUtils";
 import { toast } from "sonner";
@@ -61,7 +62,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         if (!isAvailable) {
           console.log("AI service unavailable - using fallback responses");
-          toast.warning("AI chat using offline mode - limited responses available");
+          toast.warning("AI chat using offline mode - limited responses available", {
+            duration: 3000,
+            position: "bottom-left",
+            icon: "⚠️",
+          });
         }
       } catch (error) {
         console.log("Error checking API status:", error);
@@ -292,7 +297,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       updateConversationMessages(activeConversationId!, [...updatedMessages, errorMessage]);
       
       if (errorCount >= 2) {
-        toast.info("Using offline AI responses for now.");
+        toast.info("Using offline AI responses for now.", {
+          duration: 3000,
+          position: "bottom-left",
+        });
       }
     } finally {
       setIsLoading(false);
@@ -321,9 +329,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <Bot className="text-focus-purple mr-2" size={20} />
               <h2 className="font-semibold">AI Assistant</h2>
               {!apiAvailable && (
-                <span className="ml-2 text-xs px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full">
-                  Offline Mode
-                </span>
+                <div className="ml-2 flex items-center text-xs px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full">
+                  <WifiOff size={10} className="mr-1" />
+                  <span>Offline Mode</span>
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -341,10 +350,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           
           {activeConversationId ? (
             <div className="flex-1 flex flex-col px-[24px] py-[16px] overflow-hidden">
+              {!apiAvailable && (
+                <Alert variant="default" className="mb-2 py-2 text-xs border-amber-200 bg-amber-50 text-amber-800">
+                  <AlertDescription className="text-xs">
+                    Limited responses available in offline mode
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div 
                 ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto scrollbar-thin mb-4 bg-white bg-opacity-50 rounded-xl p-2 pr-1"
-                style={{ maxHeight: "calc(100% - 80px)" }}
+                style={{ maxHeight: !apiAvailable ? "calc(100% - 110px)" : "calc(100% - 80px)" }}
               >
                 <div className="space-y-4 min-h-full">
                   {messages.map((msg, index) => (

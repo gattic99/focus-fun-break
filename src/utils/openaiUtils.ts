@@ -29,7 +29,10 @@ export const getApiKey = (): string | null => {
 
 export const setApiKey = (key: string): void => {
   // No longer storing API key in frontend
-  toast.info("AI chat is now available to all users without needing an API key.");
+  toast.info("AI chat is now available to all users without needing an API key.", {
+    duration: 3000,
+    position: "bottom-left",
+  });
 };
 
 export const clearApiKey = (): void => {
@@ -155,7 +158,11 @@ export const getAIResponse = async (message: string): Promise<string> => {
       // Try to validate the API again to update offline status
       await validateApiKey();
       
-      toast.error("Unable to connect to AI service, using offline response");
+      toast.error("Using offline responses", {
+        description: "Unable to connect to AI service",
+        duration: 3000,
+        position: "bottom-left",
+      });
       return getFallbackResponse(message);
     }
 
@@ -174,7 +181,11 @@ export const getAIResponse = async (message: string): Promise<string> => {
     
     // Only show the toast if it's not an abort error (user intentionally cancelled)
     if (!(error instanceof DOMException && error.name === "AbortError")) {
-      toast.error("Unable to connect to AI service, using offline response");
+      toast.warning("AI chat using offline mode - limited responses available", {
+        duration: 3000,
+        position: "bottom-left",
+        icon: "⚠️",
+      });
     }
     
     return getFallbackResponse(message);
