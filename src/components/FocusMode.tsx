@@ -105,7 +105,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
         <div className="text-center mb-2">
           <div className="flex items-center justify-left">
             <Clock className="text-focus-purple mr-2" size={18} />
-            <h2 className="text-lg text-dark-text font-semibold">Focus Timer</h2>
+            <h2 className="text-lg text-focus-purple font-semibold focus-heading">Focus Timer</h2>
           </div>
           <p className="text-xs text-muted-foreground text-left">The maximum focus time is 120 minutes for optimal workflow without exhaustion.</p>
         </div>

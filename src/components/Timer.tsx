@@ -45,7 +45,7 @@ const Timer: React.FC<TimerProps> = ({
           width: "180px",
           height: "180px",
           background: `conic-gradient(
-            rgba(155, 135, 245, ${progressPercentage * 0.01}) ${progressPercentage}%,
+            #9b87f5 ${progressPercentage}%,
             rgba(155, 135, 245, 0.2) ${progressPercentage}%
           )`
         }}

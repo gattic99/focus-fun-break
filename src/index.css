@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -144,6 +145,23 @@
   }
 }
 
+/* Override any blue styles with our focus-purple color */
+.bg-blue-500, .bg-blue-600, .hover\:bg-blue-600, .bg-blue-700 {
+  background-color: #9b87f5 !important;
+}
+
+.text-blue-500, .text-blue-600, .text-blue-700 {
+  color: #9b87f5 !important;
+}
+
+.border-blue-500, .border-blue-600, .border-blue-700 {
+  border-color: #9b87f5 !important;
+}
+
+.ring-blue-500, .ring-blue-600, .ring-blue-700 {
+  --tw-ring-color: #9b87f5 !important;
+}
+
 /* Add hover variants for button colors */
 .bg-focus-purple-dark {
   background-color: rgb(124, 93, 250);
@@ -164,4 +182,51 @@
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s infinite ease-in-out;
+}
+
+/* Ensure focus timer heading is always purple */
+h2:has(+ .text-focus-purple),
+[class*="focus-timer"],
+[class*="timer"] h2 {
+  color: #9b87f5 !important;
+}
+
+/* Ensure consistent button colors */
+button[class*="start"], 
+button[class*="pause"], 
+button[class*="reset"] {
+  border-radius: 9999px !important;
+}
+
+/* Focus timer specific overrides */
+.focus-heading {
+  color: #9b87f5 !important;
+}
+
+#chrome-extension-root h1,
+#chrome-extension-root h2, 
+#chrome-extension-root .text-primary {
+  color: #9b87f5 !important;
+}
+
+/* Timer circle needs to show purple, not blue */
+.timer-display {
+  background: rgba(155, 135, 245, 0.1) !important;
+}
+
+.timer-display > div {
+  color: #9b87f5 !important;
+}
+
+/* Ensure buttons are rounded and colored correctly */
+#chrome-extension-root button {
+  border-radius: 9999px;
+}
+
+button[class*="primary"] {
+  background-color: #9b87f5 !important;
+}
+
+button[class*="primary"]:hover {
+  background-color: #7E69AB !important;
 }
