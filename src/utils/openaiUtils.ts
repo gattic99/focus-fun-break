@@ -7,18 +7,7 @@ const DEVELOPMENT_BACKEND_URL = 'http://localhost:3000';
 
 // Get the appropriate backend URL based on environment
 const getBackendUrl = () => {
-  // Check for running in extension context
-  if (typeof chrome !== 'undefined' && chrome.runtime) {
-    return PRODUCTION_BACKEND_URL;
-  }
-  
-  // For development and testing
-  if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    // Try the development URL first
-    return DEVELOPMENT_BACKEND_URL;
-  }
-  
-  // Default to production backend
+  // Always try production URL first - this is the most reliable option
   return PRODUCTION_BACKEND_URL;
 };
 
@@ -65,7 +54,7 @@ export const validateApiKey = async (): Promise<boolean> => {
     const timeoutId = setTimeout(() => {
       controller.abort();
       console.log("Health check request timed out");
-    }, 5000);
+    }, 10000); // Increased timeout to 10 seconds
     
     const response = await fetch(`${backendUrl}/api/health`, {
       method: 'GET',
@@ -74,7 +63,9 @@ export const validateApiKey = async (): Promise<boolean> => {
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      mode: 'cors'
+      mode: 'cors',
+      cache: 'no-cache', // Added to prevent caching
+      credentials: 'omit' // Simplify the request
     });
     
     clearTimeout(timeoutId);
@@ -115,81 +106,73 @@ const fallbackResponses = [
 export const getAIResponse = async (message: string): Promise<string> => {
   console.log("Getting AI response for:", message);
   
-  // First, check if we're offline
-  if (!navigator.onLine) {
-    console.log("Browser is offline - using fallback response");
-    return getFallbackResponse(message);
-  }
-
-  // If we're in known offline mode, do a quick validation check
-  if (isOfflineMode) {
-    const isAvailable = await validateApiKey();
-    if (!isAvailable) {
-      console.log("Still in offline mode - using fallback response");
-      return getFallbackResponse(message);
-    }
-  }
-
-  try {
-    const backendUrl = getBackendUrl();
-    console.log("Using backend URL for chat:", backendUrl);
-    
-    // Try to make the actual request with a reasonable timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-    
-    const chatResponse = await fetch(`${backendUrl}/api/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify({ message }),
-      signal: controller.signal,
-      mode: 'cors'
-    });
-    
-    clearTimeout(timeoutId);
-
-    if (!chatResponse.ok) {
-      const errorData = await chatResponse.text();
-      console.warn("Backend API error:", errorData);
+  // Try multiple backend URLs if needed
+  const urls = [
+    'https://focus-flow-ai-backend.onrender.com', // Production
+    'https://focus-flow-ai-backend.vercel.app',   // Backup production
+    'http://localhost:3000'                       // Local development
+  ];
+  
+  let lastError = null;
+  
+  // Try each URL in sequence
+  for (const backendUrl of urls) {
+    try {
+      console.log("Trying backend URL:", backendUrl);
       
-      // Try to validate the API again to update offline status
-      await validateApiKey();
+      // Set a generous timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
       
-      toast.error("Using offline responses", {
-        description: "Unable to connect to AI service",
-        duration: 3000,
-        position: "bottom-left",
+      const chatResponse = await fetch(`${backendUrl}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({ message }),
+        signal: controller.signal,
+        mode: 'cors',
+        cache: 'no-cache',
+        credentials: 'omit'
       });
-      return getFallbackResponse(message);
-    }
+      
+      clearTimeout(timeoutId);
 
-    const data = await chatResponse.json();
-    console.log("Received response from API");
-    
-    // We successfully connected, so we're not in offline mode
-    isOfflineMode = false;
-    
-    return data.content;
-  } catch (error) {
-    console.error("Error fetching AI response:", error);
-    
-    // Update offline status
-    isOfflineMode = true;
-    
-    // Only show the toast if it's not an abort error (user intentionally cancelled)
-    if (!(error instanceof DOMException && error.name === "AbortError")) {
-      toast.warning("AI chat using offline mode - limited responses available", {
-        duration: 3000,
-        position: "bottom-left",
-        icon: "⚠️",
-      });
+      if (!chatResponse.ok) {
+        const errorData = await chatResponse.text();
+        console.warn(`Backend API error from ${backendUrl}:`, errorData);
+        lastError = errorData;
+        continue; // Try next URL
+      }
+
+      const data = await chatResponse.json();
+      console.log("Received response from API:", backendUrl);
+      
+      // We successfully connected, so we're not in offline mode
+      isOfflineMode = false;
+      
+      return data.content;
+    } catch (error) {
+      console.error(`Error fetching AI response from ${backendUrl}:`, error);
+      lastError = error;
+      // Continue to next URL
     }
-    
-    return getFallbackResponse(message);
   }
+  
+  // All URLs failed
+  console.error("All backend URLs failed. Last error:", lastError);
+  isOfflineMode = true;
+  
+  // Show a small toast near the chat
+  toast.warning("Using offline responses", {
+    duration: 3000,
+    position: "bottom-left",
+    icon: "⚠️",
+    className: "text-xs max-w-[200px]"
+  });
+  
+  return getFallbackResponse(message);
 };
 
 // Improved function to get a fallback response when the API is unavailable
