@@ -20,17 +20,14 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({
   
   const isTimerActive = isRunning && !isOpen;
   
-  // Always use purple for all modes
-  const timerColor = 'bg-focus-purple hover:bg-focus-purple-dark';
-  
   return (
     <button 
       onClick={togglePopup}
       className={cn(
         "fixed bottom-6 right-6 z-[10000] shadow-lg flex items-center justify-center transition-all duration-300 rounded-full",
         isTimerActive 
-          ? `${timerColor} w-auto min-w-[110px] h-14 px-4` 
-          : `${timerColor} w-14 h-14`
+          ? "bg-focus-purple hover:bg-focus-purple-dark w-auto min-w-[110px] h-14 px-4" 
+          : "bg-focus-purple hover:bg-focus-purple-dark w-14 h-14"
       )}
       aria-label={isOpen ? "Close Focus Timer" : "Open Focus Timer"}
     >
