@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -63,16 +62,13 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Ensure consistent color definitions for our timer app
+				// Custom colors for our timer app
 				'focus-purple': '#9b87f5',
 				'focus-purple-dark': '#7E69AB',
-				'focus-purple-light': '#E5DEFF',
-				'break-green': '#fff',
-				'game-orange': '#fff',
+				'break-green': '#F2FCE2',
+				'game-orange': '#FEC6A1',
 				'dark-text': '#1A1F2C',
 				'light-gray': '#C8C8C9',
-				// Add a specific timer blue color to override in CSS
-				'timer-blue': '#0056b3', 
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

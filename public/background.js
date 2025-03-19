@@ -9,18 +9,8 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set({
         'focusflow_settings': {
           focusDuration: 25 * 60, // 25 minutes in seconds
-          breakDuration: 5 * 60,   // 5 minutes in seconds
-          themeColor: '#9b87f5'    // Ensure consistent purple color across tabs
+          breakDuration: 5 * 60   // 5 minutes in seconds
         }
-      });
-    } else if (!result.focusflow_settings.themeColor) {
-      // Update existing settings to include theme color if missing
-      const updatedSettings = {
-        ...result.focusflow_settings,
-        themeColor: '#9b87f5'
-      };
-      chrome.storage.local.set({
-        'focusflow_settings': updatedSettings
       });
     }
   });
@@ -86,22 +76,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   
   // Return true to indicate you want to send a response asynchronously
-  return true;
-});
-
-// Handle theme consistency across tabs
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'getThemeColor') {
-    chrome.storage.local.get(['focusflow_settings'], function(result) {
-      if (result.focusflow_settings && result.focusflow_settings.themeColor) {
-        sendResponse({ themeColor: result.focusflow_settings.themeColor });
-      } else {
-        sendResponse({ themeColor: '#9b87f5' }); // Default purple
-      }
-    });
-    return true;
-  }
-  
   return true;
 });
 
@@ -190,11 +164,6 @@ chrome.tabs.onCreated.addListener(() => {
 // Listen for settings changes and sync them across tabs
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'updateSettings') {
-    // Make sure themeColor exists in settings
-    if (!message.settings.themeColor) {
-      message.settings.themeColor = '#9b87f5';
-    }
-    
     chrome.storage.local.set({
       'focusflow_settings': message.settings,
       'focusflow_settings_last_update': Date.now()

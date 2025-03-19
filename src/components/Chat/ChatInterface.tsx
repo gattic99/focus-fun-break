@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Check API availability on mount
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
@@ -60,11 +62,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         if (!isAvailable) {
           console.log("AI service unavailable - using fallback responses");
-          toast.warning("AI chat using offline mode", {
+          toast.warning("AI chat using offline mode - limited responses available", {
             duration: 3000,
             position: "bottom-left",
             icon: "⚠️",
-            className: "text-xs max-w-[200px]"
           });
         }
       } catch (error) {
@@ -76,6 +77,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     checkApiStatus();
   }, []);
 
+  // Load conversations from storage
   useEffect(() => {
     const loadStoredConversations = async () => {
       try {
@@ -127,6 +129,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     loadStoredConversations();
   }, []);
 
+  // Listen for state changes from other tabs
   useEffect(() => {
     const unsubscribe = listenForStateChanges((key, value) => {
       if (key === STORAGE_KEY && value) {
@@ -150,6 +153,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return unsubscribe;
   }, [activeConversationId]);
 
+  // Save conversations to storage
   useEffect(() => {
     if (conversations.length > 0) {
       if (isExtensionContext()) {
@@ -160,6 +164,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [conversations]);
 
+  // Create new conversation if none exists
   useEffect(() => {
     if (conversations.length === 0) {
       createNewConversation();
@@ -170,6 +175,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Auto-scroll and focus input when chat is opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
@@ -179,6 +185,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [isOpen, activeConversationId]);
 
+  // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
@@ -290,10 +297,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       updateConversationMessages(activeConversationId!, [...updatedMessages, errorMessage]);
       
       if (errorCount >= 2) {
-        toast.info("Using offline AI responses", {
+        toast.info("Using offline AI responses for now.", {
           duration: 3000,
           position: "bottom-left",
-          className: "text-xs max-w-[200px]"
         });
       }
     } finally {

@@ -52,36 +52,30 @@ const BreakMode: React.FC<BreakModeProps> = ({
   }
   
   return (
-    <div className="glass-panel p-6 w-full animate-scale-in">
-      <div className="text-center mb-4">
+    <div className="bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-white border-opacity-20 shadow-md p-6 w-full max-w-xl mx-auto animate-scale-in">
+      <div className="text-center mb-6">
         <div className="flex items-center justify-center mb-2">
           <AlarmClock className="text-focus-purple mr-2" size={20} />
-          <h2 className="text-xl font-bold text-dark-text">Break Time!</h2>
+          <h2 className="text-xl font-bold text-dark-text">Break Time</h2>
+          <span className="ml-2 text-sm font-medium text-focus-purple">{formatTime(timeRemaining)}</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Take a moment to relax. <br />Choose an activity from the options below.
+          Take a moment to relax. Choose an activity below.
         </p>
         
         {/* Use the Timer component with the appropriate props */}
-        <div className="mt-6 mb-6">
+        <div className="mb-4 mt-4">
           <Timer 
             timerState={timerState} 
+            onStart={onStart}
+            onPause={onPause}
+            onReset={onReset}
             totalDuration={breakDuration * 60}
           />
-          <div className="text-focus-purple text-xl font-bold mt-2">
-            {formatTime(timeRemaining)}
-          </div>
         </div>
       </div>
       
-      <div className="mt-6">
-        <Button 
-          onClick={handleStartOrPause} 
-          className="w-full bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold py-2 rounded-full text-sm mb-4"
-        >
-          {isRunning ? "Pause" : "Start"} <ChevronRight size={16} className="ml-1" />
-        </Button>
-        
+      <div className="mt-4">
         <div className="grid grid-cols-2 gap-3">
           <div 
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
@@ -103,14 +97,6 @@ const BreakMode: React.FC<BreakModeProps> = ({
       </div>
     </div>
   );
-  
-  function handleStartOrPause() {
-    if (timerState.isRunning) {
-      onPause();
-    } else {
-      onStart();
-    }
-  }
 };
 
 export default BreakMode;

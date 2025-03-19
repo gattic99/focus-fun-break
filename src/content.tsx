@@ -18,45 +18,6 @@ declare global {
 globalThis.tabId = uuidv4();
 console.log("Tab ID generated:", globalThis.tabId);
 
-// Ensure consistent styling across tabs
-const injectConsistentStyling = () => {
-  const styleElement = document.createElement('style');
-  styleElement.textContent = `
-    /* Enforce consistent colors across all tabs */
-    #chrome-extension-root .bg-blue-500, 
-    #chrome-extension-root .bg-blue-600, 
-    #chrome-extension-root .hover\\:bg-blue-600, 
-    #chrome-extension-root .bg-blue-700 {
-      background-color: #9b87f5 !important;
-    }
-    
-    #chrome-extension-root .text-blue-500, 
-    #chrome-extension-root .text-blue-600, 
-    #chrome-extension-root .text-blue-700 {
-      color: #9b87f5 !important;
-    }
-    
-    #chrome-extension-root button {
-      border-radius: 9999px;
-    }
-    
-    #chrome-extension-root h1, 
-    #chrome-extension-root h2, 
-    #chrome-extension-root .text-primary {
-      color: #9b87f5 !important;
-    }
-    
-    #chrome-extension-root .timer-display {
-      background: rgba(155, 135, 245, 0.1) !important;
-    }
-    
-    #chrome-extension-root .timer-display > div {
-      color: #9b87f5 !important;
-    }
-  `;
-  document.head.appendChild(styleElement);
-};
-
 // More efficient initialization process with proper performance optimizations
 const initializeExtension = () => {
   // Skip if already initialized
@@ -83,9 +44,6 @@ const initializeExtension = () => {
       return true;
     });
   }
-
-  // Inject consistent styling
-  injectConsistentStyling();
 
   // Create container with visibility hidden initially for smoother rendering
   const appContainer = document.createElement("div");

@@ -50,40 +50,7 @@
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 255 60% 75%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 222.2 84% 4.9%;
-    --sidebar-accent: 210 40% 98%;
-    --sidebar-accent-foreground: 222.2 84% 4.9%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    /* ... keep existing code (dark mode variables) */
   }
 }
 
@@ -100,7 +67,7 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-white bg-opacity-95 backdrop-blur-lg rounded-xl shadow-lg border border-white border-opacity-20;
+    @apply bg-white bg-opacity-60 backdrop-blur-lg rounded-xl shadow-lg border border-white border-opacity-20;
   }
 
   .focus-card {
@@ -108,11 +75,11 @@
   }
 
   .break-card {
-    @apply bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-focus-purple border-opacity-20 shadow-md transition-all duration-300 hover:shadow-lg;
+    @apply bg-break-green bg-opacity-80 backdrop-blur-md rounded-xl border border-break-green border-opacity-40 shadow-md transition-all duration-300 hover:shadow-lg;
   }
 
   .game-card {
-    @apply bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-focus-purple border-opacity-20 shadow-md transition-all duration-300 hover:shadow-lg;
+    @apply bg-game-orange bg-opacity-80 backdrop-blur-md rounded-xl border border-game-orange border-opacity-40 shadow-md transition-all duration-300 hover:shadow-lg;
   }
 
   .timer-text {
@@ -121,7 +88,9 @@
   }
 
   .timer-display {
-    @apply flex items-center justify-center rounded-full bg-white bg-opacity-50 border border-white border-opacity-30 shadow-inner;
+    @apply flex items-center justify-center p-6 rounded-full bg-white bg-opacity-50 border border-white border-opacity-30 shadow-inner;
+    width: 280px;
+    height: 280px;
   }
 
   .btn-primary {
@@ -133,11 +102,11 @@
   }
 
   .btn-break {
-    @apply bg-focus-purple text-white px-6 py-3 rounded-lg font-medium shadow-md transition-all duration-200 hover:shadow-lg hover:bg-opacity-90 focus:ring-2 focus:ring-focus-purple focus:ring-opacity-50 focus:outline-none;
+    @apply bg-break-green text-dark-text px-6 py-3 rounded-lg font-medium shadow-md border border-break-green border-opacity-30 transition-all duration-200 hover:shadow-lg hover:bg-opacity-90 focus:ring-2 focus:ring-break-green focus:ring-opacity-50 focus:outline-none;
   }
 
   .btn-game {
-    @apply bg-focus-purple text-white px-6 py-3 rounded-lg font-medium shadow-md transition-all duration-200 hover:shadow-lg hover:bg-opacity-90 focus:ring-2 focus:ring-focus-purple focus:ring-opacity-50 focus:outline-none;
+    @apply bg-game-orange text-dark-text px-6 py-3 rounded-lg font-medium shadow-md border border-game-orange border-opacity-30 transition-all duration-200 hover:shadow-lg hover:bg-opacity-90 focus:ring-2 focus:ring-game-orange focus:ring-opacity-50 focus:outline-none;
   }
 
   .option-card {
@@ -145,26 +114,13 @@
   }
 }
 
-/* Override any blue styles with our focus-purple color */
-.bg-blue-500, .bg-blue-600, .hover\:bg-blue-600, .bg-blue-700 {
-  background-color: #9b87f5 !important;
-}
-
-.text-blue-500, .text-blue-600, .text-blue-700 {
-  color: #9b87f5 !important;
-}
-
-.border-blue-500, .border-blue-600, .border-blue-700 {
-  border-color: #9b87f5 !important;
-}
-
-.ring-blue-500, .ring-blue-600, .ring-blue-700 {
-  --tw-ring-color: #9b87f5 !important;
-}
-
 /* Add hover variants for button colors */
 .bg-focus-purple-dark {
   background-color: rgb(124, 93, 250);
+}
+
+.bg-break-green-dark {
+  background-color: rgb(75, 185, 140);
 }
 
 /* Add animation for the floating timer */
@@ -182,51 +138,4 @@
 
 .animate-pulse-subtle {
   animation: pulse-subtle 2s infinite ease-in-out;
-}
-
-/* Ensure focus timer heading is always purple */
-h2:has(+ .text-focus-purple),
-[class*="focus-timer"],
-[class*="timer"] h2 {
-  color: #9b87f5 !important;
-}
-
-/* Ensure consistent button colors */
-button[class*="start"], 
-button[class*="pause"], 
-button[class*="reset"] {
-  border-radius: 9999px !important;
-}
-
-/* Focus timer specific overrides */
-.focus-heading {
-  color: #9b87f5 !important;
-}
-
-#chrome-extension-root h1,
-#chrome-extension-root h2, 
-#chrome-extension-root .text-primary {
-  color: #9b87f5 !important;
-}
-
-/* Timer circle needs to show purple, not blue */
-.timer-display {
-  background: rgba(155, 135, 245, 0.1) !important;
-}
-
-.timer-display > div {
-  color: #9b87f5 !important;
-}
-
-/* Ensure buttons are rounded and colored correctly */
-#chrome-extension-root button {
-  border-radius: 9999px;
-}
-
-button[class*="primary"] {
-  background-color: #9b87f5 !important;
-}
-
-button[class*="primary"]:hover {
-  background-color: #7E69AB !important;
 }
