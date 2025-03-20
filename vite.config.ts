@@ -30,6 +30,9 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    port: 8080
+  },
   build: {
     rollupOptions: {
       // Externalize Phaser to avoid bundling issues

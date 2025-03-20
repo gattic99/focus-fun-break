@@ -301,6 +301,101 @@ declare global {
     interface Game {
       destroy(removeCanvas?: boolean, noReturn?: boolean): void;
     }
+    
+    namespace Math {
+      function Between(min: number, max: number): number;
+      function FloatBetween(min: number, max: number): number;
+    }
+    
+    interface Types {
+      Physics: {
+        Arcade: {
+          ArcadePhysicsCallback: Function;
+          GameObjectWithBody: object;
+        }
+      }
+    }
+    
+    namespace Physics {
+      namespace Arcade {
+        interface StaticGroup {
+          create(x: number, y: number, key: string): Phaser.Physics.Arcade.Image;
+        }
+        
+        interface Group {
+          create(x: number, y: number, key: string): Phaser.Physics.Arcade.Image;
+          countActive(activeOnly: boolean): number;
+          children: {
+            iterate: (callback: (child: any) => boolean) => void;
+          }
+        }
+        
+        interface Image {
+          setBounceY(value: number): this;
+          setBounce(value: number): this;
+          setCollideWorldBounds(value: boolean): this;
+          setVelocity(x: number, y: number): this;
+          disableBody(disableGameObject: boolean, hideGameObject: boolean): this;
+          enableBody(reset: boolean, x: number, y: number, enableGameObject: boolean, showGameObject: boolean): this;
+          x: number;
+          y: number;
+        }
+        
+        interface Sprite {
+          setBounce(value: number): this;
+          setCollideWorldBounds(value: boolean): this;
+          setVelocityX(value: number): this;
+          setVelocityY(value: number): this;
+          anims: {
+            play(key: string, ignoreIfPlaying?: boolean): this;
+          };
+          setTint(color: number): this;
+          x: number;
+          body?: {
+            touching: {
+              down: boolean;
+            }
+          }
+        }
+      }
+    }
+    
+    interface GameObjects {
+      Text: any;
+    }
+    
+    interface Scene {
+      add: {
+        image(x: number, y: number, key: string): any;
+        text(x: number, y: number, text: string, style: object): any;
+      };
+      physics: {
+        add: {
+          staticGroup(): Phaser.Physics.Arcade.StaticGroup;
+          sprite(x: number, y: number, key: string): Phaser.Physics.Arcade.Sprite;
+          collider(object1: any, object2: any, collideCallback?: Function, processCallback?: Function, callbackContext?: any): any;
+          overlap(object1: any, object2: any, overlapCallback?: Function, processCallback?: Function, callbackContext?: any): any;
+          group(config?: any): Phaser.Physics.Arcade.Group;
+        };
+        pause(): void;
+      };
+      anims: {
+        create(config: any): any;
+        generateFrameNumbers(key: string, config: { start: number, end: number }): any;
+      };
+      input: {
+        keyboard: {
+          createCursorKeys(): any;
+        }
+      };
+      load: {
+        image(key: string, path: string): void;
+        spritesheet(key: string, path: string, config: { frameWidth: number, frameHeight: number }): void;
+      };
+      scene: {
+        start(key: string): void;
+      };
+    }
   }
 }
 
