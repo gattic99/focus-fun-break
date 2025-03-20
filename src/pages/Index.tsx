@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { defaultTimerSettings } from "@/utils/timerUtils";
 import { useTimer } from "@/hooks/useTimer";
@@ -11,7 +11,9 @@ import FloatingTimer from "@/components/FloatingTimer";
 import ChatBubble from "@/components/Chat/ChatBubble";
 import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
 import { toast } from "sonner";
-import PlatformerGame from "@/components/PlatformerGame";
+
+// Lazy load the PlatformerGame component to avoid circular dependencies
+const PlatformerGame = React.lazy(() => import("@/components/PlatformerGame"));
 
 const Index: React.FC = () => {
   // Initialize with default settings (25 min focus, 5 min break)
@@ -151,6 +153,7 @@ const Index: React.FC = () => {
   };
 
   const handleReturnFromGame = () => {
+    console.log("Returning from game activity");
     selectBreakActivity(null);
   };
 
@@ -168,6 +171,7 @@ const Index: React.FC = () => {
   const renderContent = () => {
     // Special case for game activity during break
     if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
+      console.log("Rendering game activity UI");
       return (
         <div className="fixed inset-0 flex items-center justify-center z-[10000]">
           <div className="bg-black bg-opacity-50 absolute inset-0"></div>
@@ -179,12 +183,19 @@ const Index: React.FC = () => {
             >
               <X size={18} />
             </button>
-            <PlatformerGame 
-              onReturn={handleReturnFromGame} 
-              timerState={timerState} 
-              onStart={startTimer} 
-              onPause={pauseTimer} 
-            />
+            <Suspense fallback={
+              <div className="flex flex-col items-center justify-center h-[400px]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-focus-purple mb-4"></div>
+                <p className="text-focus-purple">Loading game...</p>
+              </div>
+            }>
+              <PlatformerGame 
+                onReturn={handleReturnFromGame} 
+                timerState={timerState} 
+                onStart={startTimer} 
+                onPause={pauseTimer} 
+              />
+            </Suspense>
           </Card>
         </div>
       );

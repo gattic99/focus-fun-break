@@ -23,6 +23,16 @@ function loadPhaserIfNeeded() {
     script.onerror = (error) => {
       console.error("Failed to load Phaser from CDN:", error);
       window.phaserLoading = false;
+      // Try alternative CDN on failure
+      const fallbackScript = document.createElement('script');
+      fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js';
+      fallbackScript.async = true;
+      fallbackScript.onload = () => {
+        console.log("Phaser loaded successfully from fallback CDN!");
+        window.phaserGameLoaded = true;
+        window.dispatchEvent(new CustomEvent('phaser-loaded'));
+      };
+      document.head.appendChild(fallbackScript);
     };
     
     document.head.appendChild(script);
