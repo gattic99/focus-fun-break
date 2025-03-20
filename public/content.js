@@ -20,8 +20,8 @@ function loadPhaserIfNeeded() {
       // Dispatch event to notify game component
       window.dispatchEvent(new CustomEvent('phaser-loaded'));
     };
-    script.onerror = () => {
-      console.error("Failed to load Phaser from CDN");
+    script.onerror = (error) => {
+      console.error("Failed to load Phaser from CDN:", error);
       window.phaserLoading = false;
     };
     
@@ -42,9 +42,12 @@ window.addEventListener('load-phaser-game', () => {
 
 // Also try to preload Phaser when the extension loads
 if (typeof window !== 'undefined') {
-  if ('requestIdleCallback' in window) {
-    window.requestIdleCallback(() => loadPhaserIfNeeded(), { timeout: 3000 });
-  } else {
-    setTimeout(loadPhaserIfNeeded, 1000);
-  }
+  // Add a small delay to allow the extension UI to initialize first
+  setTimeout(() => {
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(() => loadPhaserIfNeeded(), { timeout: 3000 });
+    } else {
+      setTimeout(loadPhaserIfNeeded, 1000);
+    }
+  }, 500);
 }

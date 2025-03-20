@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { TimerState } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
@@ -20,20 +20,23 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
 }) => {
   const [gameLoaded, setGameLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [game, setGame] = useState<any | null>(null);
+  const gameInstanceRef = useRef<any>(null);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+  const [loadingPhaser, setLoadingPhaser] = useState(false);
   
   useEffect(() => {
-    // Trigger the Phaser loading process
-    window.dispatchEvent(new CustomEvent('load-phaser-game'));
-    
-    let gameInstance: any = null;
-    let phaserLoadListener: () => void;
+    console.log("PlatformerGame component mounted");
     
     // Function to initialize the game once Phaser is loaded
     const initGame = () => {
       try {
         if (!window.Phaser) {
           console.error("Phaser not loaded yet");
+          return;
+        }
+        
+        if (gameInstanceRef.current) {
+          console.log("Game already initialized, skipping");
           return;
         }
         
@@ -46,6 +49,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
           }
 
           preload() {
+            console.log("Preloader scene: Loading assets...");
             this.load.image('sky', 'assets/sky.png');
             this.load.image('ground', 'assets/platform.png');
             this.load.image('star', 'assets/star.png');
@@ -57,6 +61,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
           }
 
           create() {
+            console.log("Preloader scene: Assets loaded, starting game");
             this.scene.start('PlayGame');
           }
         }
@@ -208,11 +213,11 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
           type: window.Phaser.AUTO,
           width: 800,
           height: 600,
-          parent: 'phaser-game',
+          parent: gameContainerRef.current || 'phaser-game',
           physics: {
             default: 'arcade',
             arcade: {
-              gravity: { y: 300, x: 0 }, // Added x: 0 to satisfy Vector2Like type
+              gravity: { y: 300, x: 0 }, // x:0 required by Vector2Like type
               debug: false
             }
           },
@@ -220,8 +225,8 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         };
 
         // Create and start the game
-        gameInstance = new window.Phaser.Game(config);
-        setGame(gameInstance);
+        console.log("Creating new Phaser game instance");
+        gameInstanceRef.current = new window.Phaser.Game(config);
         setGameLoaded(true);
         console.log("Phaser game created successfully");
       } catch (error) {
@@ -231,8 +236,10 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     };
 
     // Setup listener for when Phaser is loaded
-    phaserLoadListener = () => {
+    const phaserLoadListener = () => {
       console.log("Phaser loaded event received");
+      setLoadingPhaser(false);
+      setGameLoaded(true);
       initGame();
     };
     
@@ -242,20 +249,26 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     if (window.phaserGameLoaded && window.Phaser) {
       console.log("Phaser already loaded, initializing game immediately");
       initGame();
+    } else {
+      console.log("Triggering Phaser load");
+      setLoadingPhaser(true);
+      // Dispatch the load-phaser-game event to tell content.js to load Phaser
+      window.dispatchEvent(new CustomEvent('load-phaser-game'));
     }
 
     // Clean up function to destroy the game when the component unmounts
     return () => {
       window.removeEventListener('phaser-loaded', phaserLoadListener);
-      if (gameInstance) {
+      if (gameInstanceRef.current) {
         console.log("Destroying Phaser game instance");
-        gameInstance.destroy(true);
+        gameInstanceRef.current.destroy(true);
+        gameInstanceRef.current = null;
       }
     };
   }, []);
 
   return (
-    <div className="break-card p-4 w-full max-w-md mx-auto animate-scale-in bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-white border-opacity-20 shadow-md">
+    <div className="break-card p-4 w-full mx-auto animate-scale-in bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-white border-opacity-20 shadow-md">
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold text-dark-text">Platformer Game</h2>
         <p className="text-sm text-muted-foreground">
@@ -272,10 +285,16 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         </div>
       ) : (
         <>
-          <div id="phaser-game" className="mb-4 rounded overflow-hidden">
-            {!gameLoaded && (
-              <div className="flex justify-center items-center h-[300px] bg-gray-100">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-focus-purple"></div>
+          <div 
+            id="phaser-game" 
+            ref={gameContainerRef}
+            className="mb-4 rounded overflow-hidden bg-gray-100"
+            style={{ width: '100%', height: '400px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+          >
+            {(loadingPhaser || !gameLoaded) && (
+              <div className="flex flex-col justify-center items-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-focus-purple mb-4"></div>
+                <p className="text-focus-purple">Loading game...</p>
               </div>
             )}
           </div>

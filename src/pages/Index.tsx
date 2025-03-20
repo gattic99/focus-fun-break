@@ -169,8 +169,16 @@ const Index: React.FC = () => {
     // Special case for game activity during break
     if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
       return (
-        <div className="fixed bottom-24 right-6 z-[10000] animate-scale-in">
-          <Card className="glass-panel w-[800px] p-4 shadow-xl">
+        <div className="fixed inset-0 flex items-center justify-center z-[10000]">
+          <div className="bg-black bg-opacity-50 absolute inset-0"></div>
+          <Card className="glass-panel w-[800px] max-w-[95vw] p-4 shadow-xl relative z-10">
+            <button 
+              onClick={handleReturnFromGame} 
+              className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-200 z-20"
+              aria-label="Close game"
+            >
+              <X size={18} />
+            </button>
             <PlatformerGame 
               onReturn={handleReturnFromGame} 
               timerState={timerState} 
