@@ -1,56 +1,57 @@
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
-import { VitePWA } from 'vite-plugin-pwa'
-import path from 'path'
-import { componentTagger } from "lovable-tagger"
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+import { componentTagger } from "lovable-tagger";
+import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  server: {
+    host: "::",
+    port: 8080,
+  },
   plugins: [
     react(),
-    mode === 'development' && componentTagger(),
-    VitePWA({ 
+    mode === 'development' &&
+    componentTagger(),
+    VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'time-for-break.mp3', 'time-for-focus.mp3'],
       manifest: {
         name: 'FocusFlow',
         short_name: 'FocusFlow',
-        description: 'Stay focused, take mindful breaks, and boost productivity.',
-        theme_color: '#9b87f5',
+        description: 'Productivity timer with focus and break sessions',
+        theme_color: '#8B5CF6',
+        background_color: '#ffffff',
+        display: 'standalone',
         icons: [
           {
-            src: 'icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: 'favicon.ico',
+            sizes: '64x64',
+            type: 'image/x-icon'
           },
-          {
-            src: 'icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
+          // For a production app, you should add more icon sizes:
+          // 192x192, 512x512, maskable icons, etc.
         ]
       }
     })
   ].filter(Boolean),
-  server: {
-    host: "::",
-    port: 8080
-  },
   build: {
-    // Copy Phaser assets to build output
+    cssCodeSplit: false,
     rollupOptions: {
-      external: [],
+      input: {
+        content: "./src/content.tsx",
+      },
       output: {
-        manualChunks: {
-          phaser: ['phaser']
-        }
-      }
-    }
+        entryFileNames: "[name].js",
+        assetFileNames: "styles.css",
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
-}))
+}));

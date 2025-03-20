@@ -3,12 +3,10 @@ import React, { useEffect } from "react";
 import Timer from "./Timer";
 import { TimerState, BreakActivity } from "@/types";
 import { formatTime } from "@/utils/timerUtils";
+import PlatformerGame from "./PlatformerGame";
+import RelaxGuide from "./RelaxGuide";
 import { AlarmClock, Gamepad, Dumbbell, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
-
-// Component forward declaration to avoid circular imports
-const PlatformerGame = React.lazy(() => import("./PlatformerGame"));
-const RelaxGuide = React.lazy(() => import("./RelaxGuide"));
 
 interface BreakModeProps {
   timerState: TimerState;
@@ -40,41 +38,17 @@ const BreakMode: React.FC<BreakModeProps> = ({
     });
   }, [breakActivity, isRunning, timeRemaining]);
   
-  // Add additional logging for monitoring breakActivity changes
-  useEffect(() => {
-    console.log("BreakActivity changed to:", breakActivity);
-  }, [breakActivity]);
-  
-  // Use React.Suspense to handle lazy-loaded components
   if (breakActivity === 'game') {
-    return (
-      <React.Suspense fallback={
-        <div className="flex justify-center items-center h-80">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-focus-purple"></div>
-          <p className="text-focus-purple ml-3">Loading game...</p>
-        </div>
-      }>
-        <PlatformerGame 
-          onReturn={() => onSelectActivity(null)} 
-          timerState={timerState} 
-          onStart={onStart} 
-          onPause={onPause} 
-        />
-      </React.Suspense>
-    );
+    return <PlatformerGame 
+      onReturn={() => onSelectActivity(null)} 
+      timerState={timerState} 
+      onStart={onStart} 
+      onPause={onPause} 
+    />;
   }
   
   if (breakActivity === 'relax') {
-    return (
-      <React.Suspense fallback={
-        <div className="flex justify-center items-center h-80">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-focus-purple"></div>
-          <p className="text-focus-purple ml-3">Loading relaxation guide...</p>
-        </div>
-      }>
-        <RelaxGuide onReturn={() => onSelectActivity(null)} timerState={timerState} />
-      </React.Suspense>
-    );
+    return <RelaxGuide onReturn={() => onSelectActivity(null)} timerState={timerState} />;
   }
   
   return (

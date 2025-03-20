@@ -58,9 +58,6 @@ declare global {
   interface Window {
     chrome?: Chrome;
     hasRun?: boolean;
-    Phaser: any;
-    phaserGameLoaded: boolean;
-    phaserLoading: boolean;
   }
   var chrome: Chrome | undefined;
   var tabId: string;
