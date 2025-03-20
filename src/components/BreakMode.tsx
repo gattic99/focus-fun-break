@@ -39,12 +39,17 @@ const BreakMode: React.FC<BreakModeProps> = ({
   }, [breakActivity, isRunning, timeRemaining]);
   
   if (breakActivity === 'game') {
-    return <PlatformerGame 
-      onReturn={() => onSelectActivity(null)} 
-      timerState={timerState} 
-      onStart={onStart} 
-      onPause={onPause} 
-    />;
+    console.log("Rendering PlatformerGame component");
+    return (
+      <div className="w-full max-w-[800px] mx-auto">
+        <PlatformerGame 
+          onReturn={() => onSelectActivity(null)} 
+          timerState={timerState} 
+          onStart={onStart} 
+          onPause={onPause} 
+        />
+      </div>
+    );
   }
   
   if (breakActivity === 'relax') {
@@ -79,7 +84,10 @@ const BreakMode: React.FC<BreakModeProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div 
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
-            onClick={() => onSelectActivity('game')}
+            onClick={() => {
+              console.log("Game activity clicked");
+              onSelectActivity('game');
+            }}
           >
             <Gamepad size={22} className="mb-2 text-focus-purple" />
             <h4 className="text-sm font-medium">Play Game <ChevronRight size={14} className="inline-block ml-1" /></h4>

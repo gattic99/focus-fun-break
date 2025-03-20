@@ -8,7 +8,6 @@ import BreakMode from "@/components/BreakMode";
 import { TimerSettings } from "@/types";
 import { X } from "lucide-react";
 import FloatingTimer from "@/components/FloatingTimer";
-import PlatformerGame from "@/components/PlatformerGame";
 import ChatBubble from "@/components/Chat/ChatBubble";
 import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
 import { toast } from "sonner";
@@ -151,6 +150,7 @@ const Index: React.FC = () => {
   };
 
   const handleReturnFromGame = () => {
+    console.log("Returning from game to break mode");
     selectBreakActivity(null);
   };
 
@@ -164,8 +164,19 @@ const Index: React.FC = () => {
     setIsChatOpen(false);
   };
 
+  // Directly render the game when in break mode with game activity selected
   if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
-    return <PlatformerGame onReturn={handleReturnFromGame} timerState={timerState} onStart={startTimer} onPause={pauseTimer} />;
+    console.log("Index rendering PlatformerGame directly");
+    return (
+      <div className="w-full max-w-[800px] mx-auto p-4">
+        <PlatformerGame 
+          onReturn={handleReturnFromGame} 
+          timerState={timerState} 
+          onStart={startTimer} 
+          onPause={pauseTimer} 
+        />
+      </div>
+    );
   }
 
   return (

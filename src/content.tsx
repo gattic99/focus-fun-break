@@ -10,6 +10,7 @@ declare global {
   interface Window {
     hasRun?: boolean;
     focusflowLoaded?: boolean;
+    Phaser?: any; // Make Phaser available on window
   }
   var tabId: string;
 }
@@ -18,13 +19,45 @@ declare global {
 globalThis.tabId = uuidv4();
 console.log("Tab ID generated:", globalThis.tabId);
 
+// Load Phaser from CDN if needed
+const loadPhaserLibrary = () => {
+  return new Promise<void>((resolve, reject) => {
+    if (window.Phaser) {
+      console.log("[FocusFlow] Phaser already loaded");
+      resolve();
+      return;
+    }
+
+    console.log("[FocusFlow] Loading Phaser from CDN");
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js';
+    script.async = true;
+    script.onload = () => {
+      console.log("[FocusFlow] Phaser loaded successfully");
+      resolve();
+    };
+    script.onerror = (error) => {
+      console.error("[FocusFlow] Failed to load Phaser:", error);
+      reject(error);
+    };
+    document.head.appendChild(script);
+  });
+};
+
 // More efficient initialization process with proper performance optimizations
-const initializeExtension = () => {
+const initializeExtension = async () => {
   // Skip if already initialized
   if (window.focusflowLoaded) return;
   window.focusflowLoaded = true;
   
   console.log(`[FocusFlow] Initializing extension in tab ${globalThis.tabId}`);
+  
+  // Try to load Phaser library
+  try {
+    await loadPhaserLibrary();
+  } catch (error) {
+    console.error("[FocusFlow] Error loading Phaser, continuing anyway:", error);
+  }
   
   // When running as an extension, set up communication between background script
   if (typeof chrome !== 'undefined' && chrome.runtime) {
@@ -51,11 +84,23 @@ const initializeExtension = () => {
   appContainer.style.visibility = "hidden";
   appContainer.style.position = "fixed";  // Use fixed positioning
   appContainer.style.zIndex = "2147483647";  // Maximum z-index
+  appContainer.style.width = "100%";
+  appContainer.style.height = "100%";
+  appContainer.style.top = "0";
+  appContainer.style.left = "0";
+  appContainer.style.pointerEvents = "none"; // Let clicks pass through by default
+  
+  // Create an inner container that will capture clicks
+  const innerContainer = document.createElement("div");
+  innerContainer.style.pointerEvents = "auto"; // This element will capture clicks
+  innerContainer.id = "chrome-extension-inner";
+  appContainer.appendChild(innerContainer);
+  
   document.body.appendChild(appContainer);
 
   // Render with reduced layout thrashing and better performance
   setTimeout(() => {
-    const rootElement = document.getElementById("chrome-extension-root");
+    const rootElement = document.getElementById("chrome-extension-inner");
     if (rootElement) {
       console.log("[FocusFlow] Rendering app");
       
