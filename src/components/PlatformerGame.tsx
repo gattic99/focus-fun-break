@@ -1,6 +1,5 @@
 
-import React, { useEffect } from 'react';
-import Phaser from 'phaser';
+import React, { useEffect, useState } from 'react';
 import { TimerState } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
@@ -13,6 +12,7 @@ interface PlatformerGameProps {
   onPause?: () => void;
 }
 
+// Define the types we'll need for the game before import
 class Preloader extends Phaser.Scene {
   constructor() {
     super({ key: 'Preloader' });
@@ -198,34 +198,63 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   onStart,
   onPause
 }) => {
+  const [gameLoaded, setGameLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [game, setGame] = useState<Phaser.Game | null>(null);
+  
   useEffect(() => {
-    // Define the game configuration
-    const config: Phaser.Types.Core.GameConfig = {
-      type: Phaser.AUTO,
-      width: 800,
-      height: 600,
-      parent: 'phaser-game',
-      physics: {
-        default: 'arcade',
-        arcade: {
-          gravity: { x: 0, y: 300 }, // Fix: Added x property to satisfy Vector2Like type
-          debug: false
-        }
-      },
-      scene: [Preloader, PlayGame]
+    let gameInstance: Phaser.Game | null = null;
+    
+    // Dynamic import of Phaser with proper error handling
+    const loadGame = async () => {
+      try {
+        // Dynamically import Phaser
+        const Phaser = await import('phaser');
+        
+        // Define the game configuration
+        const config: Phaser.Types.Core.GameConfig = {
+          type: Phaser.AUTO,
+          width: 800,
+          height: 600,
+          parent: 'phaser-game',
+          physics: {
+            default: 'arcade',
+            arcade: {
+              gravity: { y: 300 },
+              debug: false
+            }
+          },
+          scene: [Preloader, PlayGame]
+        };
+
+        // Create and start the game
+        gameInstance = new Phaser.Game(config);
+        setGame(gameInstance);
+        setGameLoaded(true);
+      } catch (error) {
+        console.error("Error loading Phaser:", error);
+        setLoadError("Failed to load game engine. Please try again later.");
+      }
     };
 
-    // Create and start the game
-    const game = new Phaser.Game(config);
+    // Ensure the container exists before loading the game
+    const gameContainer = document.getElementById('phaser-game');
+    if (gameContainer) {
+      loadGame();
+    } else {
+      setLoadError("Game container not found");
+    }
 
     // Clean up function to destroy the game when the component unmounts
     return () => {
-      game.destroy(true);
+      if (gameInstance) {
+        gameInstance.destroy(true);
+      }
     };
   }, []);
 
   return (
-    <div className="break-card p-4 w-full max-w-md mx-auto animate-scale-in">
+    <div className="break-card p-4 w-full max-w-md mx-auto animate-scale-in bg-white bg-opacity-80 backdrop-blur-md rounded-xl border border-white border-opacity-20 shadow-md">
       <div className="text-center mb-4">
         <h2 className="text-xl font-bold text-dark-text">Platformer Game</h2>
         <p className="text-sm text-muted-foreground">
@@ -233,23 +262,46 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         </p>
       </div>
 
-      <div id="phaser-game" className="mb-4"></div>
-      
-      <div className="mb-4 mt-4">
-        <Timer 
-          timerState={timerState}
-          onStart={onStart}
-          onPause={onPause}
-        />
-      </div>
+      {loadError ? (
+        <div className="text-center p-4 text-red-500">
+          <p>{loadError}</p>
+          <Button onClick={onReturn} className="mt-4 bg-focus-purple hover:bg-focus-purple-dark">
+            Return to Timer
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div id="phaser-game" className="mb-4 rounded overflow-hidden"></div>
+          
+          <div className="mb-4 mt-4">
+            <Timer 
+              timerState={timerState}
+              onStart={onStart}
+              onPause={onPause}
+            />
+          </div>
 
-      <div className="flex justify-center">
-        <Button onClick={onReturn} className="btn-secondary text-sm py-2 px-4">
-          Return to Timer <ChevronRight size={16} className="ml-1" />
-        </Button>
-      </div>
+          <div className="flex justify-center">
+            <Button onClick={onReturn} className="btn-secondary text-sm py-2 px-4">
+              Return to Timer <ChevronRight size={16} className="ml-1" />
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
+
+// Add this to declare the Phaser namespace to avoid TypeScript errors
+declare global {
+  interface Window {
+    Phaser: any;
+  }
+  namespace Phaser {
+    interface Game {
+      destroy(removeCanvas?: boolean, noReturn?: boolean): void;
+    }
+  }
+}
 
 export default PlatformerGame;

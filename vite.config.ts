@@ -1,57 +1,48 @@
 
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react-swc'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
+export default defineConfig({
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
-    VitePWA({
+    VitePWA({ 
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'time-for-break.mp3', 'time-for-focus.mp3'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'FocusFlow',
         short_name: 'FocusFlow',
-        description: 'Productivity timer with focus and break sessions',
-        theme_color: '#8B5CF6',
-        background_color: '#ffffff',
-        display: 'standalone',
+        description: 'Stay focused, take mindful breaks, and boost productivity.',
+        theme_color: '#9b87f5',
         icons: [
           {
-            src: 'favicon.ico',
-            sizes: '64x64',
-            type: 'image/x-icon'
+            src: 'icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
           },
-          // For a production app, you should add more icon sizes:
-          // 192x192, 512x512, maskable icons, etc.
+          {
+            src: 'icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
         ]
       }
     })
-  ].filter(Boolean),
+  ],
   build: {
-    cssCodeSplit: false,
     rollupOptions: {
-      input: {
-        content: "./src/content.tsx",
-      },
-      output: {
-        entryFileNames: "[name].js",
-        assetFileNames: "styles.css",
-      },
-    },
+      // Externalize Phaser to avoid bundling issues
+      external: ['phaser']
+    }
+  },
+  optimizeDeps: {
+    // Make sure Phaser is included in the optimization
+    include: ['phaser']
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': '/src',
     },
   },
-}));
+})
