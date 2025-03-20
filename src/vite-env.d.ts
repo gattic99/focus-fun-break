@@ -1,3 +1,9 @@
 
 /// <reference types="vite/client" />
-/// <reference types="phaser" />
+
+// Extended window interface for Phaser
+interface Window {
+  Phaser: any;
+  phaserGameLoaded: boolean;
+  phaserLoading: boolean;
+}

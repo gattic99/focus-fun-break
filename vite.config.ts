@@ -38,14 +38,15 @@ export default defineConfig(({ mode }) => ({
     port: 8080
   },
   build: {
+    // Copy Phaser assets to build output
     rollupOptions: {
-      // Externalize Phaser to avoid bundling issues
-      external: ['phaser']
+      external: [],
+      output: {
+        manualChunks: {
+          phaser: ['phaser']
+        }
+      }
     }
-  },
-  optimizeDeps: {
-    // Make sure Phaser is included in the optimization
-    include: ['phaser']
   },
   resolve: {
     alias: {
@@ -53,4 +54,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }))
-
