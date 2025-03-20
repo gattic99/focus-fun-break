@@ -105,7 +105,7 @@ class PlayGame extends Phaser.Scene {
     this.physics.add.overlap(
       this.player, 
       this.stars, 
-      this.collectStar as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
+      this.collectStar as any, 
       undefined, 
       this
     );
@@ -119,7 +119,7 @@ class PlayGame extends Phaser.Scene {
     this.physics.add.collider(
       this.player, 
       this.bombs, 
-      this.hitBomb as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
+      this.hitBomb as any, 
       undefined, 
       this
     );
@@ -200,10 +200,10 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
 }) => {
   const [gameLoaded, setGameLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [game, setGame] = useState<Phaser.Game | null>(null);
+  const [game, setGame] = useState<any | null>(null);
   
   useEffect(() => {
-    let gameInstance: Phaser.Game | null = null;
+    let gameInstance: any = null;
     
     // Dynamic import of Phaser with proper error handling
     const loadGame = async () => {
@@ -212,7 +212,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         const Phaser = await import('phaser');
         
         // Define the game configuration
-        const config: Phaser.Types.Core.GameConfig = {
+        const config = {
           type: Phaser.AUTO,
           width: 800,
           height: 600,
@@ -292,111 +292,5 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   );
 };
 
-// Add this to declare the Phaser namespace to avoid TypeScript errors
-declare global {
-  interface Window {
-    Phaser: any;
-  }
-  namespace Phaser {
-    interface Game {
-      destroy(removeCanvas?: boolean, noReturn?: boolean): void;
-    }
-    
-    namespace Math {
-      function Between(min: number, max: number): number;
-      function FloatBetween(min: number, max: number): number;
-    }
-    
-    interface Types {
-      Physics: {
-        Arcade: {
-          ArcadePhysicsCallback: Function;
-          GameObjectWithBody: object;
-        }
-      }
-    }
-    
-    namespace Physics {
-      namespace Arcade {
-        interface StaticGroup {
-          create(x: number, y: number, key: string): Phaser.Physics.Arcade.Image;
-        }
-        
-        interface Group {
-          create(x: number, y: number, key: string): Phaser.Physics.Arcade.Image;
-          countActive(activeOnly: boolean): number;
-          children: {
-            iterate: (callback: (child: any) => boolean) => void;
-          }
-        }
-        
-        interface Image {
-          setBounceY(value: number): this;
-          setBounce(value: number): this;
-          setCollideWorldBounds(value: boolean): this;
-          setVelocity(x: number, y: number): this;
-          disableBody(disableGameObject: boolean, hideGameObject: boolean): this;
-          enableBody(reset: boolean, x: number, y: number, enableGameObject: boolean, showGameObject: boolean): this;
-          x: number;
-          y: number;
-        }
-        
-        interface Sprite {
-          setBounce(value: number): this;
-          setCollideWorldBounds(value: boolean): this;
-          setVelocityX(value: number): this;
-          setVelocityY(value: number): this;
-          anims: {
-            play(key: string, ignoreIfPlaying?: boolean): this;
-          };
-          setTint(color: number): this;
-          x: number;
-          body?: {
-            touching: {
-              down: boolean;
-            }
-          }
-        }
-      }
-    }
-    
-    interface GameObjects {
-      Text: any;
-    }
-    
-    interface Scene {
-      add: {
-        image(x: number, y: number, key: string): any;
-        text(x: number, y: number, text: string, style: object): any;
-      };
-      physics: {
-        add: {
-          staticGroup(): Phaser.Physics.Arcade.StaticGroup;
-          sprite(x: number, y: number, key: string): Phaser.Physics.Arcade.Sprite;
-          collider(object1: any, object2: any, collideCallback?: Function, processCallback?: Function, callbackContext?: any): any;
-          overlap(object1: any, object2: any, overlapCallback?: Function, processCallback?: Function, callbackContext?: any): any;
-          group(config?: any): Phaser.Physics.Arcade.Group;
-        };
-        pause(): void;
-      };
-      anims: {
-        create(config: any): any;
-        generateFrameNumbers(key: string, config: { start: number, end: number }): any;
-      };
-      input: {
-        keyboard: {
-          createCursorKeys(): any;
-        }
-      };
-      load: {
-        image(key: string, path: string): void;
-        spritesheet(key: string, path: string, config: { frameWidth: number, frameHeight: number }): void;
-      };
-      scene: {
-        start(key: string): void;
-      };
-    }
-  }
-}
-
 export default PlatformerGame;
+
