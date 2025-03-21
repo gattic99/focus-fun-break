@@ -7,12 +7,15 @@ export class SimpleGameScene extends Phaser.Scene {
   private stars?: Phaser.Physics.Arcade.Group;
   private score: number = 0;
   private scoreText?: Phaser.GameObjects.Text;
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
+    console.log("SimpleGameScene constructor called");
   }
 
   preload() {
+    console.log("SimpleGameScene preload started");
     // Create simple graphics instead of loading external assets
     this.load.on('fileerror', (file: any) => {
       console.warn('Failed to load file:', file.key);
@@ -23,6 +26,7 @@ export class SimpleGameScene extends Phaser.Scene {
     this.createColoredRectangle('platform', 200, 30, 0x00aa00);
     this.createColoredRectangle('player', 32, 48, 0x0000ff);
     this.createColoredRectangle('star', 24, 24, 0xffff00);
+    console.log("SimpleGameScene preload completed");
   }
 
   createColoredRectangle(key: string, width: number, height: number, color: number) {
@@ -31,9 +35,11 @@ export class SimpleGameScene extends Phaser.Scene {
     graphics.fillRect(0, 0, width, height);
     graphics.generateTexture(key, width, height);
     graphics.clear();
+    console.log(`Created texture: ${key}`);
   }
 
   create() {
+    console.log("SimpleGameScene create started");
     // Set a simple background color
     this.cameras.main.setBackgroundColor('#87CEEB');
     
@@ -82,7 +88,8 @@ export class SimpleGameScene extends Phaser.Scene {
     });
     
     // Add cursor keys
-    this.input.keyboard.createCursorKeys();
+    this.cursors = this.input.keyboard.createCursorKeys();
+    console.log("SimpleGameScene create completed");
   }
   
   collectStar(player: Phaser.Physics.Arcade.Sprite, star: Phaser.Physics.Arcade.Image) {
@@ -107,19 +114,17 @@ export class SimpleGameScene extends Phaser.Scene {
   }
   
   update() {
-    if (!this.player) return;
+    if (!this.player || !this.cursors) return;
     
-    const cursors = this.input.keyboard.createCursorKeys();
-    
-    if (cursors.left.isDown) {
+    if (this.cursors.left.isDown) {
       this.player.setVelocityX(-160);
-    } else if (cursors.right.isDown) {
+    } else if (this.cursors.right.isDown) {
       this.player.setVelocityX(160);
     } else {
       this.player.setVelocityX(0);
     }
     
-    if (cursors.up.isDown && this.player.body.touching.down) {
+    if (this.cursors.up.isDown && this.player.body.touching.down) {
       this.player.setVelocityY(-330);
     }
   }

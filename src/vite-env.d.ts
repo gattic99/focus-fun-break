@@ -10,5 +10,14 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Ensure Phaser is defined as a global
+// Ensure Phaser is defined properly
+declare namespace Phaser {
+  export const AUTO: number;
+  export class Game {
+    constructor(config: any);
+    destroy(removeCanvas?: boolean, noReturn?: boolean): void;
+  }
+}
+
+// Ensure Phaser is accessible globally
 declare const Phaser: typeof Phaser;
