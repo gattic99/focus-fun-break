@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button"; // Add Button import
 import { defaultTimerSettings } from "@/utils/timerUtils";
 import { useTimer } from "@/hooks/useTimer";
 import FocusMode from "@/components/FocusMode";

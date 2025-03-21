@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import Timer from "./Timer";
 import { toast } from "sonner";
-import { getExtensionURL } from "@/utils/chromeUtils";
 
 interface PlatformerGameProps {
   onReturn: () => void;
@@ -16,7 +15,7 @@ interface PlatformerGameProps {
 
 // Create a simpler game class that doesn't rely on external assets
 class SimpleGame extends Phaser.Scene {
-  private player?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private player?: Phaser.Physics.Arcade.Sprite;
   private platforms?: Phaser.Physics.Arcade.StaticGroup;
   private stars?: Phaser.Physics.Arcade.Group;
   private score: number = 0;
@@ -28,7 +27,7 @@ class SimpleGame extends Phaser.Scene {
 
   preload() {
     // Create simple graphics instead of loading external assets
-    this.load.on('fileerror', (file) => {
+    this.load.on('fileerror', (file: any) => {
       console.warn('Failed to load file:', file.key);
     });
     
@@ -39,7 +38,7 @@ class SimpleGame extends Phaser.Scene {
     this.createColoredRectangle('star', 24, 24, 0xffff00);
   }
 
-  createColoredRectangle(key, width, height, color) {
+  createColoredRectangle(key: string, width: number, height: number, color: number) {
     const graphics = this.add.graphics();
     graphics.fillStyle(color, 1);
     graphics.fillRect(0, 0, width, height);
@@ -77,7 +76,7 @@ class SimpleGame extends Phaser.Scene {
       setXY: { x: 12, y: 0, stepX: 70 }
     });
     
-    this.stars.children.iterate((child) => {
+    this.stars.children.iterate((child: any) => {
       const c = child as Phaser.Physics.Arcade.Image;
       c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
       return true;
@@ -96,13 +95,15 @@ class SimpleGame extends Phaser.Scene {
     this.input.keyboard.createCursorKeys();
   }
   
-  collectStar(player, star) {
+  collectStar(player: Phaser.Physics.Arcade.Sprite, star: Phaser.Physics.Arcade.Image) {
     star.disableBody(true, true);
     this.score += 10;
-    this.scoreText.setText('Score: ' + this.score);
+    if (this.scoreText) {
+      this.scoreText.setText('Score: ' + this.score);
+    }
     
-    if (this.stars.countActive(true) === 0) {
-      this.stars.children.iterate((child) => {
+    if (this.stars && this.stars.countActive(true) === 0) {
+      this.stars.children.iterate((child: any) => {
         const c = child as Phaser.Physics.Arcade.Image;
         c.enableBody(true, c.x, 0, true, true);
         return true;
@@ -111,6 +112,8 @@ class SimpleGame extends Phaser.Scene {
   }
   
   update() {
+    if (!this.player) return;
+    
     const cursors = this.input.keyboard.createCursorKeys();
     
     if (cursors.left.isDown) {
@@ -156,7 +159,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     }
     
     // Make sure Phaser is available
-    if (typeof Phaser === 'undefined') {
+    if (typeof Phaser === 'undefined' || !window.Phaser) {
       console.error("Phaser is not defined");
       setErrorState("Game engine not available");
       return;
@@ -187,7 +190,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         gameInstanceRef.current = new Phaser.Game(config);
         console.log("Phaser game initialized with config:", config);
         setGameInitialized(true);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error initializing Phaser game:", error);
         setErrorState(`Failed to start game: ${error.message}`);
       }
