@@ -167,7 +167,7 @@ declare namespace Phaser {
     };
   }
 
-  class Cameras {
+  namespace Cameras {
     class SceneManager {
       main: Camera;
     }
@@ -177,8 +177,8 @@ declare namespace Phaser {
     }
   }
 
-  class Math {
-    static FloatBetween(min: number, max: number): number;
+  namespace Math {
+    function FloatBetween(min: number, max: number): number;
   }
 
   const AUTO: number;
