@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { defaultTimerSettings } from "@/utils/timerUtils";
@@ -11,14 +10,13 @@ import FloatingTimer from "@/components/FloatingTimer";
 import ChatBubble from "@/components/Chat/ChatBubble";
 import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
 import { toast } from "sonner";
+import PlatformerGame from "@/components/PlatformerGame";
 
 const Index: React.FC = () => {
-  // Initialize with default settings (25 min focus, 5 min break)
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Load settings from storage on initial render
   useEffect(() => {
     const loadSettings = async () => {
       if (isExtensionContext()) {
@@ -52,7 +50,6 @@ const Index: React.FC = () => {
     settings
   });
 
-  // Debug log to track timer state changes in Index component
   useEffect(() => {
     console.log("Index component - timerState updated:", {
       mode: timerState.mode,
@@ -78,7 +75,6 @@ const Index: React.FC = () => {
     setSettings(newSettings);
     updateFocusDuration(newDuration);
     
-    // Save settings to Chrome storage and notify background script
     if (isExtensionContext()) {
       try {
         await saveToLocalStorage('focusflow_settings', newSettings);
@@ -102,7 +98,6 @@ const Index: React.FC = () => {
     setSettings(newSettings);
     updateBreakDuration(newDuration);
     
-    // Save settings to Chrome storage and notify background script
     if (isExtensionContext()) {
       try {
         await saveToLocalStorage('focusflow_settings', newSettings);
@@ -121,7 +116,7 @@ const Index: React.FC = () => {
 
   const openTimerPopup = () => {
     setIsTimerOpen(true);
-    setIsChatOpen(false); // Close chat when timer is opened
+    setIsChatOpen(false);
   };
 
   const closeTimerPopup = () => {
@@ -154,17 +149,15 @@ const Index: React.FC = () => {
     selectBreakActivity(null);
   };
 
-  // Pass state setters to ChatBubble
   const handleOpenChat = () => {
     setIsChatOpen(true);
-    setIsTimerOpen(false); // Close timer when chat is opened
+    setIsTimerOpen(false);
   };
 
   const handleCloseChat = () => {
     setIsChatOpen(false);
   };
 
-  // Directly render the game when in break mode with game activity selected
   if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
     console.log("Index rendering PlatformerGame directly");
     return (
@@ -181,8 +174,6 @@ const Index: React.FC = () => {
 
   return (
     <div>
-      {/* Removed the FigmaBackground component */}
-      
       <ChatBubble 
         isOpen={isChatOpen}
         onOpen={handleOpenChat}
