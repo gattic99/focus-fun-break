@@ -84,6 +84,13 @@ declare namespace Phaser {
       setActive(value: boolean): this;
       setVisible(value: boolean): this;
     }
+    
+    // Add Image class definition
+    class Image extends GameObject {
+      x: number;
+      y: number;
+      setBounceY(value: number): this;
+    }
   }
 
   namespace Physics {
@@ -104,13 +111,14 @@ declare namespace Phaser {
       }
 
       class Group {
-        children: GameObjects.GameObject[];
+        // Fix the children property type to include iterate method
+        children: {
+          entries: GameObjects.GameObject[];
+          iterate(callback: Function, context?: any): any;
+        };
         create(x: number, y: number, key: string): Sprite;
         createMultiple(config: any): this;
         countActive(value: boolean): number;
-        children: {
-          iterate(callback: Function, context?: any): any;
-        };
       }
 
       class Body {
@@ -126,6 +134,8 @@ declare namespace Phaser {
         setBounceY(value: number): this;
         enableBody(active: boolean, x: number, y: number, enableGameObject: boolean, showGameObject: boolean): this;
         disableBody(disableGameObject: boolean, hideGameObject: boolean): this;
+        x: number; // Add x property
+        y: number; // Add y property
       }
     }
 
@@ -182,6 +192,14 @@ declare namespace Phaser {
   }
 
   const AUTO: number;
+  
+  class GameObjectFactory {
+    existing(gameObject: GameObjects.GameObject): GameObjects.GameObject;
+  }
+  
+  class GameObjects {
+    static Sprite: any;
+  }
 }
 
 // Global Phaser

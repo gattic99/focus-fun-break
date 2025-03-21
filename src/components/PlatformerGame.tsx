@@ -76,11 +76,14 @@ class SimpleGame extends Phaser.Scene {
       setXY: { x: 12, y: 0, stepX: 70 }
     });
     
-    this.stars.children.iterate((child: any) => {
-      const c = child as Phaser.Physics.Arcade.Image;
-      c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-      return true;
-    });
+    // Properly use the children.iterate method with type safety
+    if (this.stars.children && typeof this.stars.children.iterate === 'function') {
+      this.stars.children.iterate((child: any) => {
+        const c = child as Phaser.Physics.Arcade.Image;
+        c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+        return true;
+      });
+    }
     
     this.physics.add.collider(this.stars, this.platforms);
     this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
@@ -103,11 +106,16 @@ class SimpleGame extends Phaser.Scene {
     }
     
     if (this.stars && this.stars.countActive(true) === 0) {
-      this.stars.children.iterate((child: any) => {
-        const c = child as Phaser.Physics.Arcade.Image;
-        c.enableBody(true, c.x, 0, true, true);
-        return true;
-      });
+      // Properly use the children.iterate method with type safety
+      if (this.stars.children && typeof this.stars.children.iterate === 'function') {
+        this.stars.children.iterate((child: any) => {
+          const c = child as Phaser.Physics.Arcade.Image;
+          if (c && typeof c.enableBody === 'function') {
+            c.enableBody(true, c.x, 0, true, true);
+          }
+          return true;
+        });
+      }
     }
   }
   
