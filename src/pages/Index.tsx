@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { defaultTimerSettings } from "@/utils/timerUtils";
@@ -16,6 +17,7 @@ const Index: React.FC = () => {
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [gameError, setGameError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -36,6 +38,15 @@ const Index: React.FC = () => {
     };
     
     loadSettings();
+    
+    // Check if Phaser is available
+    if (typeof window !== 'undefined') {
+      if (!window.Phaser) {
+        console.warn("Phaser not detected on window object");
+      } else {
+        console.log("Phaser detected on window object:", window.Phaser);
+      }
+    }
   }, []);
 
   const {
@@ -147,6 +158,7 @@ const Index: React.FC = () => {
   const handleReturnFromGame = () => {
     console.log("Returning from game to break mode");
     selectBreakActivity(null);
+    setGameError(null);
   };
 
   const handleOpenChat = () => {
@@ -158,18 +170,39 @@ const Index: React.FC = () => {
     setIsChatOpen(false);
   };
 
+  // Use a more resilient approach for the game state
+  const renderGameComponent = () => {
+    console.log("Rendering game component with timerState:", timerState);
+    try {
+      return (
+        <div className="w-full max-w-[800px] mx-auto p-4">
+          <PlatformerGame 
+            onReturn={handleReturnFromGame} 
+            timerState={timerState} 
+            onStart={startTimer} 
+            onPause={pauseTimer} 
+          />
+        </div>
+      );
+    } catch (err) {
+      console.error("Error rendering game component:", err);
+      setGameError(err.message);
+      // Fallback content when game rendering fails
+      return (
+        <div className="w-full max-w-[800px] mx-auto p-4 text-center">
+          <h2 className="text-xl font-bold mb-2">Game Loading Error</h2>
+          <p className="text-red-500 mb-4">{err.message}</p>
+          <Button onClick={handleReturnFromGame}>
+            Return to Break Timer
+          </Button>
+        </div>
+      );
+    }
+  };
+
   if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
     console.log("Index rendering PlatformerGame directly");
-    return (
-      <div className="w-full max-w-[800px] mx-auto p-4">
-        <PlatformerGame 
-          onReturn={handleReturnFromGame} 
-          timerState={timerState} 
-          onStart={startTimer} 
-          onPause={pauseTimer} 
-        />
-      </div>
-    );
+    return renderGameComponent();
   }
 
   return (

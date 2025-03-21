@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Timer from "./Timer";
 import { TimerState, BreakActivity } from "@/types";
 import { formatTime } from "@/utils/timerUtils";
@@ -7,6 +7,7 @@ import PlatformerGame from "./PlatformerGame";
 import RelaxGuide from "./RelaxGuide";
 import { AlarmClock, Gamepad, Dumbbell, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
+import { toast } from "sonner";
 
 interface BreakModeProps {
   timerState: TimerState;
@@ -28,6 +29,7 @@ const BreakMode: React.FC<BreakModeProps> = ({
   onChangeBreakDuration
 }) => {
   const { breakActivity, timeRemaining, isRunning } = timerState;
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   // Log when break mode renders to help with debugging
   useEffect(() => {
@@ -37,6 +39,26 @@ const BreakMode: React.FC<BreakModeProps> = ({
       timeRemaining
     });
   }, [breakActivity, isRunning, timeRemaining]);
+  
+  // Handle activity selection with transition state
+  const handleSelectActivity = (activity: BreakActivity) => {
+    console.log(`Selecting activity: ${activity}`);
+    setIsTransitioning(true);
+    
+    // Small delay to avoid UI flicker
+    setTimeout(() => {
+      onSelectActivity(activity);
+      setIsTransitioning(false);
+    }, 100);
+  };
+  
+  if (isTransitioning) {
+    return (
+      <div className="flex items-center justify-center p-6">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-focus-purple"></div>
+      </div>
+    );
+  }
   
   if (breakActivity === 'game') {
     console.log("Rendering PlatformerGame component");
@@ -86,7 +108,8 @@ const BreakMode: React.FC<BreakModeProps> = ({
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
             onClick={() => {
               console.log("Game activity clicked");
-              onSelectActivity('game');
+              toast.info("Loading game...");
+              handleSelectActivity('game');
             }}
           >
             <Gamepad size={22} className="mb-2 text-focus-purple" />
@@ -96,7 +119,7 @@ const BreakMode: React.FC<BreakModeProps> = ({
           <div 
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
             style={{ animationDelay: '0.1s' }}
-            onClick={() => onSelectActivity('relax')}
+            onClick={() => handleSelectActivity('relax')}
           >
             <Dumbbell size={22} className="mb-2 text-focus-purple" />
             <h4 className="text-sm font-medium">Relax & Stretch <ChevronRight size={14} className="inline-block ml-1" /></h4>

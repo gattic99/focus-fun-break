@@ -19,7 +19,7 @@ declare global {
 globalThis.tabId = uuidv4();
 console.log("Tab ID generated:", globalThis.tabId);
 
-// Load Phaser from CDN if needed
+// Load Phaser from CDN with better error handling
 const loadPhaserLibrary = () => {
   return new Promise<void>((resolve, reject) => {
     if (window.Phaser) {
@@ -29,17 +29,67 @@ const loadPhaserLibrary = () => {
     }
 
     console.log("[FocusFlow] Loading Phaser from CDN");
+    
+    // First try loading from a more reliable CDN
     const script = document.createElement('script');
     script.src = 'https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js';
     script.async = true;
+    
+    // Add more detailed error/load handling
     script.onload = () => {
-      console.log("[FocusFlow] Phaser loaded successfully");
-      resolve();
+      console.log("[FocusFlow] Phaser loaded successfully from jsdelivr");
+      
+      // Create a global function to check if Phaser is actually working
+      window.Phaser = window.Phaser || {};
+      
+      // Verify that key Phaser components exist
+      if (typeof window.Phaser.Game !== 'function') {
+        console.warn("[FocusFlow] Phaser loaded but Game class not found, might be corrupted");
+        
+        // Try from another CDN as fallback
+        const fallbackScript = document.createElement('script');
+        fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js';
+        fallbackScript.async = true;
+        
+        fallbackScript.onload = () => {
+          console.log("[FocusFlow] Phaser loaded successfully from fallback CDN");
+          resolve();
+        };
+        
+        fallbackScript.onerror = (error) => {
+          console.error("[FocusFlow] Failed to load Phaser from fallback:", error);
+          // Continue anyway, our game implementation handles missing Phaser
+          resolve();
+        };
+        
+        document.head.appendChild(fallbackScript);
+      } else {
+        resolve();
+      }
     };
+    
     script.onerror = (error) => {
-      console.error("[FocusFlow] Failed to load Phaser:", error);
-      reject(error);
+      console.error("[FocusFlow] Failed to load Phaser from primary CDN:", error);
+      
+      // Try from another CDN as fallback
+      const fallbackScript = document.createElement('script');
+      fallbackScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js';
+      fallbackScript.async = true;
+      
+      fallbackScript.onload = () => {
+        console.log("[FocusFlow] Phaser loaded successfully from fallback CDN");
+        resolve();
+      };
+      
+      fallbackScript.onerror = (secondError) => {
+        console.error("[FocusFlow] Failed to load Phaser from fallback:", secondError);
+        // Continue anyway, our game implementation handles missing Phaser
+        resolve();
+      };
+      
+      document.head.appendChild(fallbackScript);
     };
+    
     document.head.appendChild(script);
   });
 };

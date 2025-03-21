@@ -1,10 +1,11 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import Phaser from 'phaser';
 import { TimerState } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import Timer from "./Timer";
+import { toast } from "sonner";
+import { getExtensionURL } from "@/utils/chromeUtils";
 
 interface PlatformerGameProps {
   onReturn: () => void;
@@ -13,191 +14,116 @@ interface PlatformerGameProps {
   onPause?: () => void;
 }
 
-class Preloader extends Phaser.Scene {
+// Create a simpler game class that doesn't rely on external assets
+class SimpleGame extends Phaser.Scene {
+  private player?: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private platforms?: Phaser.Physics.Arcade.StaticGroup;
+  private stars?: Phaser.Physics.Arcade.Group;
+  private score: number = 0;
+  private scoreText?: Phaser.GameObjects.Text;
+
   constructor() {
-    super({ key: 'Preloader' });
+    super('SimpleGame');
   }
 
   preload() {
-    // Load phaser assets with error handling
-    this.load.image('sky', 'assets/sky.png').on('fileerror', () => {
-      console.error('Failed to load sky image');
+    // Create simple graphics instead of loading external assets
+    this.load.on('fileerror', (file) => {
+      console.warn('Failed to load file:', file.key);
     });
-    this.load.image('ground', 'assets/platform.png').on('fileerror', () => {
-      console.error('Failed to load ground image');
-    });
-    this.load.image('star', 'assets/star.png').on('fileerror', () => {
-      console.error('Failed to load star image');
-    });
-    this.load.image('bomb', 'assets/bomb.png').on('fileerror', () => {
-      console.error('Failed to load bomb image');
-    });
-    this.load.spritesheet('dude', 'assets/dude.png', { frameWidth: 32, frameHeight: 48 })
-    .on('fileerror', () => {
-      console.error('Failed to load dude spritesheet');
-    });
+    
+    // Generate colored rectangles for game objects
+    this.createColoredRectangle('ground', 400, 50, 0x009900);
+    this.createColoredRectangle('platform', 200, 30, 0x00aa00);
+    this.createColoredRectangle('player', 32, 48, 0x0000ff);
+    this.createColoredRectangle('star', 24, 24, 0xffff00);
+  }
+
+  createColoredRectangle(key, width, height, color) {
+    const graphics = this.add.graphics();
+    graphics.fillStyle(color, 1);
+    graphics.fillRect(0, 0, width, height);
+    graphics.generateTexture(key, width, height);
+    graphics.clear();
   }
 
   create() {
-    this.scene.start('PlayGame');
-  }
-}
-
-class PlayGame extends Phaser.Scene {
-  private platforms?: Phaser.Physics.Arcade.StaticGroup;
-  private player?: Phaser.Physics.Arcade.Sprite;
-  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
-  private stars?: Phaser.Physics.Arcade.Group;
-  private bombs?: Phaser.Physics.Arcade.Group;
-  private score: number = 0;
-  private scoreText?: Phaser.GameObjects.Text;
-  private gameOver: boolean = false;
-
-  constructor() {
-    super({ key: 'PlayGame' });
-  }
-
-  create() {
-    this.add.image(400, 300, 'sky');
-
+    // Set a simple background color
+    this.cameras.main.setBackgroundColor('#87CEEB');
+    
+    // Create static platforms
     this.platforms = this.physics.add.staticGroup();
-
+    
+    // Create the ground
     this.platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-
-    this.platforms.create(600, 400, 'ground');
-    this.platforms.create(50, 250, 'ground');
-    this.platforms.create(750, 220, 'ground');
-
-    this.player = this.physics.add.sprite(100, 450, 'dude');
-
+    
+    // Create platforms
+    this.platforms.create(600, 400, 'platform');
+    this.platforms.create(50, 250, 'platform');
+    this.platforms.create(750, 220, 'platform');
+    
+    // Create player with physics
+    this.player = this.physics.add.sprite(100, 450, 'player');
     this.player.setBounce(0.2);
     this.player.setCollideWorldBounds(true);
-
-    this.anims.create({
-      key: 'left',
-      frames: this.anims.generateFrameNumbers('dude', { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1
-    });
-
-    this.anims.create({
-      key: 'turn',
-      frames: [{ key: 'dude', frame: 4 }],
-      frameRate: 20
-    });
-
-    this.anims.create({
-      key: 'right',
-      frames: this.anims.generateFrameNumbers('dude', { start: 5, end: 8 }),
-      frameRate: 10,
-      repeat: -1
-    });
-
+    
+    // Add collider between player and platforms
     this.physics.add.collider(this.player, this.platforms);
-
-    this.cursors = this.input.keyboard.createCursorKeys();
-
+    
+    // Create stars
     this.stars = this.physics.add.group({
       key: 'star',
       repeat: 11,
       setXY: { x: 12, y: 0, stepX: 70 }
     });
-
+    
     this.stars.children.iterate((child) => {
       const c = child as Phaser.Physics.Arcade.Image;
       c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-      return true; // Return true to continue iteration
+      return true;
     });
-
+    
     this.physics.add.collider(this.stars, this.platforms);
-
-    this.physics.add.overlap(
-      this.player, 
-      this.stars, 
-      this.collectStar as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
-      undefined, 
-      this
-    );
-
-    this.scoreText = this.add.text(16, 16, 'score: 0', { fontSize: '32px', color: '#000' });
-
-    this.bombs = this.physics.add.group();
-
-    this.physics.add.collider(this.bombs, this.platforms);
-
-    this.physics.add.collider(
-      this.player, 
-      this.bombs, 
-      this.hitBomb as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, 
-      undefined, 
-      this
-    );
+    this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
+    
+    // Add score text
+    this.scoreText = this.add.text(16, 16, 'Score: 0', { 
+      fontSize: '32px', 
+      color: '#000' 
+    });
+    
+    // Add cursor keys
+    this.input.keyboard.createCursorKeys();
   }
-
-  update() {
-    if (this.gameOver) {
-      return;
-    }
-
-    if (this.cursors?.left.isDown) {
-      this.player?.setVelocityX(-160);
-
-      this.player?.anims.play('left', true);
-    }
-    else if (this.cursors?.right.isDown) {
-      this.player?.setVelocityX(160);
-
-      this.player?.anims.play('right', true);
-    }
-    else {
-      this.player?.setVelocityX(0);
-
-      this.player?.anims.play('turn');
-    }
-
-    if (this.cursors?.up.isDown && this.player?.body?.touching.down) {
-      this.player.setVelocityY(-330);
-    }
-  }
-
-  collectStar(
-    _player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-    star: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
-  ) {
-    const s = star as Phaser.Physics.Arcade.Image;
-    s.disableBody(true, true);
-
+  
+  collectStar(player, star) {
+    star.disableBody(true, true);
     this.score += 10;
-    this.scoreText?.setText('Score: ' + this.score);
-
-    if (this.stars?.countActive(true) === 0) {
+    this.scoreText.setText('Score: ' + this.score);
+    
+    if (this.stars.countActive(true) === 0) {
       this.stars.children.iterate((child) => {
         const c = child as Phaser.Physics.Arcade.Image;
         c.enableBody(true, c.x, 0, true, true);
-        return true; // Return true to continue iteration
+        return true;
       });
-
-      const playerSprite = _player as Phaser.Physics.Arcade.Sprite;
-      const x = (playerSprite.x < 400) ? Phaser.Math.Between(400, 800) : Phaser.Math.Between(0, 400);
-
-      const bomb = this.bombs?.create(x, 16, 'bomb') as Phaser.Physics.Arcade.Image;
-      bomb.setBounce(1);
-      bomb.setCollideWorldBounds(true);
-      bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
     }
   }
-
-  hitBomb(
-    player: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile, 
-    _bomb: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
-  ) {
-    this.physics.pause();
-
-    const playerSprite = player as Phaser.Physics.Arcade.Sprite;
-    playerSprite.setTint(0xff0000);
-    playerSprite.anims.play('turn');
-
-    this.gameOver = true;
+  
+  update() {
+    const cursors = this.input.keyboard.createCursorKeys();
+    
+    if (cursors.left.isDown) {
+      this.player.setVelocityX(-160);
+    } else if (cursors.right.isDown) {
+      this.player.setVelocityX(160);
+    } else {
+      this.player.setVelocityX(0);
+    }
+    
+    if (cursors.up.isDown && this.player.body.touching.down) {
+      this.player.setVelocityY(-330);
+    }
   }
 }
 
@@ -210,6 +136,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const [gameInitialized, setGameInitialized] = useState(false);
   const gameInstanceRef = useRef<Phaser.Game | null>(null);
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("PlatformerGame component mounted");
@@ -224,6 +151,14 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     // Ensure the container is in the DOM
     if (!gameContainerRef.current) {
       console.error("Game container ref is not available");
+      setErrorState("Game container not available");
+      return;
+    }
+    
+    // Make sure Phaser is available
+    if (typeof Phaser === 'undefined') {
+      console.error("Phaser is not defined");
+      setErrorState("Game engine not available");
       return;
     }
     
@@ -245,7 +180,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
               debug: false
             }
           },
-          scene: [Preloader, PlayGame]
+          scene: [SimpleGame]
         };
 
         // Create and start the game
@@ -254,8 +189,9 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         setGameInitialized(true);
       } catch (error) {
         console.error("Error initializing Phaser game:", error);
+        setErrorState(`Failed to start game: ${error.message}`);
       }
-    }, 300);
+    }, 500);
 
     // Clean up function to destroy the game when the component unmounts
     return () => {
@@ -281,9 +217,8 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         id="phaser-game" 
         ref={gameContainerRef} 
         className="mb-4 w-full h-[600px] bg-gray-100 rounded-lg overflow-hidden"
-        style={{ display: 'block' }}
       >
-        {!gameInitialized && (
+        {!gameInitialized && !errorState && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-focus-purple mx-auto mb-2"></div>
@@ -291,14 +226,30 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
             </div>
           </div>
         )}
+        
+        {errorState && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <p className="text-red-500 mb-2">Unable to load game</p>
+              <p className="text-sm text-gray-500">{errorState}</p>
+              <Button className="mt-4" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="mb-4 mt-4">
-        <Timer 
-          timerState={timerState}
-          onStart={onStart}
-          onPause={onPause}
-        />
+        {timerState && (
+          <Timer 
+            timerState={timerState}
+            onStart={onStart}
+            onPause={onPause}
+            totalDuration={timerState.mode === 'break' ? 
+              (timerState.timeRemaining > 0 ? timerState.timeRemaining : 300) : 0}
+          />
+        )}
       </div>
 
       <div className="flex justify-center">
