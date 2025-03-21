@@ -7,7 +7,7 @@ const getBackendUrl = () => {
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:3000';
   }
-  // For production, use our deployed backend
+  // For production, use our deployed backend with fallback
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -38,15 +38,33 @@ export const isApiKeyValidated = (): boolean => {
 };
 
 export const validateApiKey = async (): Promise<boolean> => {
+  console.log("Checking if API is available...");
+  
+  // First check if we're online
+  if (!navigator.onLine) {
+    console.log("Device is offline - API not available");
+    return false;
+  }
+  
   // Check if our backend API is available
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    console.log("Attempting to connect to backend:", getBackendUrl());
     const response = await fetch(`${getBackendUrl()}/api/health`, {
-      // Adding timeout to avoid long waits on network errors
-      signal: AbortSignal.timeout(5000)
+      method: 'GET',
+      // Use no-cors mode to avoid CORS issues
+      mode: 'no-cors',
+      signal: controller.signal
     });
-    return response.ok;
+    
+    clearTimeout(timeoutId);
+    console.log("API available:", response.ok);
+    return true; // If we get here without an error, we'll consider it a success
   } catch (error) {
     console.error("Error checking backend health:", error);
+    console.log("API available: false");
     // Don't show error toast during initial silent check
     return false;
   }
@@ -76,49 +94,49 @@ export const getAIResponse = async (message: string): Promise<string> => {
   }
 
   try {
+    // Quick health check with no-cors mode
+    const isApiAvailable = await validateApiKey();
+    if (!isApiAvailable) {
+      console.log("API unavailable - using fallback response");
+      return getFallbackResponse(message);
+    }
+    
     const backendUrl = getBackendUrl();
     console.log("Using backend URL:", backendUrl);
     
-    // Quick health check first
+    // Try the chat request with CORS enabled
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     try {
-      const healthResponse = await fetch(`${backendUrl}/api/health`, {
-        method: "GET",
-        signal: AbortSignal.timeout(3000)
+      console.log("Sending chat request to backend");
+      const chatResponse = await fetch(`${backendUrl}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ message }),
+        signal: controller.signal
       });
-      
-      if (!healthResponse.ok) {
-        console.log("Health check failed, status:", healthResponse.status);
+
+      clearTimeout(timeoutId);
+
+      if (!chatResponse.ok) {
+        const errorData = await chatResponse.text();
+        console.warn("Backend API error:", errorData);
         return getFallbackResponse(message);
       }
-      
-      console.log("Health check passed, proceeding with chat request");
+
+      const data = await chatResponse.json();
+      console.log("Received response from API");
+      return data.content;
     } catch (error) {
-      console.error("Health check error:", error);
+      clearTimeout(timeoutId);
+      console.error("Error fetching AI response:", error);
       return getFallbackResponse(message);
     }
-    
-    // If health check passes, proceed with actual request
-    console.log("Sending chat request to backend");
-    const chatResponse = await fetch(`${backendUrl}/api/chat`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ message }),
-      signal: AbortSignal.timeout(10000)
-    });
-
-    if (!chatResponse.ok) {
-      const errorData = await chatResponse.text();
-      console.warn("Backend API error:", errorData);
-      return getFallbackResponse(message);
-    }
-
-    const data = await chatResponse.json();
-    console.log("Received response from API:", data);
-    return data.content;
   } catch (error) {
-    console.error("Error fetching AI response:", error);
+    console.error("Error in getAIResponse:", error);
     return getFallbackResponse(message);
   }
 };

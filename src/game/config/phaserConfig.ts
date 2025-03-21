@@ -9,10 +9,16 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
     console.warn("Container is null, game may not display correctly");
   }
   
+  // Get container dimensions for responsive sizing
+  const width = container ? container.clientWidth : 800;
+  const height = container ? container.clientHeight : 600;
+  
+  console.log(`Game dimensions: ${width}x${height}`);
+  
   return {
     type: Phaser.AUTO,
-    width: 800,
-    height: 600,
+    width: width,
+    height: height,
     parent: container || undefined,
     backgroundColor: '#87CEEB',
     physics: {
@@ -22,6 +28,14 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
         debug: false
       }
     },
-    scene: [SimpleGameScene]
+    scene: [SimpleGameScene],
+    // Set to false to avoid issues with browser scaling
+    disableContextMenu: true,
+    render: {
+      pixelArt: false,
+      antialias: true,
+      // Disable roundPixels as it can cause rendering issues
+      roundPixels: false
+    }
   };
 };

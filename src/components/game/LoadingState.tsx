@@ -16,8 +16,8 @@ const LoadingState: React.FC<LoadingStateProps> = ({ isLoading, error, onRetry }
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-focus-purple mx-auto mb-2"></div>
-          <p>Loading game...</p>
-          <p className="text-xs text-gray-500 mt-2">This may take a moment</p>
+          <p className="font-medium">Loading game...</p>
+          <p className="text-xs text-gray-500 mt-2">Please wait while we set up the game</p>
         </div>
       </div>
     );
@@ -26,13 +26,21 @@ const LoadingState: React.FC<LoadingStateProps> = ({ isLoading, error, onRetry }
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">Unable to load game</p>
-          <p className="text-sm text-gray-500 mb-2">{error}</p>
-          <div className="text-xs text-gray-400 bg-gray-100 p-2 mb-3 rounded max-w-md overflow-auto">
-            <p>Debug info: Phaser available: {typeof Phaser !== 'undefined' ? 'Yes' : 'No'}</p>
+        <div className="text-center max-w-md">
+          <p className="text-red-500 mb-2 font-medium">Unable to load game</p>
+          <p className="text-sm text-gray-700 mb-4">{error}</p>
+          <div className="text-xs text-gray-500 bg-gray-100 p-3 mb-3 rounded overflow-auto">
+            <p>Debug info:</p>
+            <ul className="list-disc pl-5 text-left">
+              <li>Phaser globally available: {typeof window !== 'undefined' && window.Phaser ? 'Yes' : 'No'}</li>
+              <li>Phaser module available: {typeof Phaser !== 'undefined' ? 'Yes' : 'No'}</li>
+              <li>Browser: {typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'}</li>
+            </ul>
           </div>
-          <Button className="mt-2" onClick={onRetry || (() => window.location.reload())}>
+          <Button 
+            className="mt-2" 
+            onClick={onRetry || (() => window.location.reload())}
+          >
             Try Again
           </Button>
         </div>
