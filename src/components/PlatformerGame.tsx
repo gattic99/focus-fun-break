@@ -22,7 +22,7 @@ class SimpleGame extends Phaser.Scene {
   private scoreText?: Phaser.GameObjects.Text;
 
   constructor() {
-    super('SimpleGame');
+    super({ key: 'SimpleGame' });
   }
 
   preload() {

@@ -22,7 +22,7 @@ declare namespace Phaser {
         width: number;
         height: number;
         parent?: HTMLElement | string;
-        scene?: Scene[];
+        scene?: Scene | Scene[] | Function | Object | any;
         physics?: PhysicsConfig;
         [key: string]: any;
       }
@@ -47,12 +47,16 @@ declare namespace Phaser {
     add: Add;
     cameras: Cameras.SceneManager;
     input: Input;
-    load: Loader;
+    load: Load;
     physics: Physics;
     children: GameObjectFactory;
     generate: TextureManager;
+    sys: Systems;
     createColoredRectangle(key: string, width: number, height: number, color: number): void;
     collectStar(player: any, star: any): void;
+    preload(): void;
+    create(): void;
+    update(): void;
   }
 
   interface SceneConfig {
@@ -151,7 +155,7 @@ declare namespace Phaser {
     }
   }
 
-  class Loader {
+  class Load {
     on(event: string, callback: Function, context?: any): this;
   }
 
@@ -199,6 +203,11 @@ declare namespace Phaser {
   
   class GameObjects {
     static Sprite: any;
+  }
+  
+  // Adding Systems class for Phaser.Scene.sys
+  class Systems {
+    [key: string]: any;
   }
 }
 
