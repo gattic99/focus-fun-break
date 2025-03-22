@@ -1,3 +1,4 @@
+
 import Phaser from 'phaser';
 
 export class SimpleGameScene extends Phaser.Scene {
@@ -231,6 +232,11 @@ export class SimpleGameScene extends Phaser.Scene {
         // Call the callback to add details
         callback(ctx);
         
+        // Make sure we destroy and recreate the texture to avoid caching issues
+        if (this.textures.exists(key)) {
+          this.textures.remove(key);
+        }
+        
         // Create a new texture from the canvas
         this.textures.addCanvas(key, canvas);
       }
@@ -265,6 +271,11 @@ export class SimpleGameScene extends Phaser.Scene {
         
         // Call the callback to add details
         callback(ctx);
+        
+        // Make sure we destroy and recreate the texture to avoid caching issues
+        if (this.textures.exists(key)) {
+          this.textures.remove(key);
+        }
         
         // Create a new texture from the canvas
         this.textures.addCanvas(key, canvas);
