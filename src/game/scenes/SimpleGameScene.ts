@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 
 export class SimpleGameScene extends Phaser.Scene {
@@ -11,8 +10,8 @@ export class SimpleGameScene extends Phaser.Scene {
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private gameTitle?: Phaser.GameObjects.Text;
   private instructionText?: Phaser.GameObjects.Text;
-  private sinaTexture?: Phaser.Textures.Canvas;
-  private cristinaTexture?: Phaser.Textures.Canvas;
+  private sinaTexture?: any;
+  private cristinaTexture?: any;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
