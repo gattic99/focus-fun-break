@@ -15,9 +15,9 @@ const LoadingState: React.FC<LoadingStateProps> = ({ isLoading, error, onRetry }
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-focus-purple mx-auto mb-2"></div>
-          <p className="font-medium">Loading game...</p>
-          <p className="text-xs text-gray-500 mt-2">Please wait while we set up the game</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 mx-auto mb-2"></div>
+          <p className="font-medium text-purple-800">Loading Office Escape game...</p>
+          <p className="text-xs text-gray-500 mt-2">Get ready to collect coins and dodge obstacles!</p>
         </div>
       </div>
     );

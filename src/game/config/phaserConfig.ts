@@ -20,7 +20,7 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
     width: width,
     height: height,
     parent: container || undefined,
-    backgroundColor: '#87CEEB',
+    backgroundColor: '#def3fd', // Light blue sky color
     physics: {
       default: 'arcade',
       arcade: {
@@ -29,6 +29,10 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
       }
     },
     scene: [SimpleGameScene],
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
     // Set to false to avoid issues with browser scaling
     disableContextMenu: true,
     render: {

@@ -66,13 +66,6 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
 
   return (
     <div className="break-card p-4 w-full max-w-[800px] mx-auto animate-scale-in bg-white bg-opacity-90 rounded-xl shadow-lg">
-      <div className="text-center mb-4">
-        <h2 className="text-xl font-bold text-dark-text">Platformer Game</h2>
-        <p className="text-sm text-muted-foreground">
-          Collect all the stars to win! Use arrow keys or touch controls.
-        </p>
-      </div>
-
       <div 
         id="phaser-game" 
         ref={gameContainerRef} 

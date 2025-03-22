@@ -5,9 +5,14 @@ export class SimpleGameScene extends Phaser.Scene {
   private player?: Phaser.Physics.Arcade.Sprite;
   private platforms?: Phaser.Physics.Arcade.StaticGroup;
   private stars?: Phaser.Physics.Arcade.Group;
+  private obstacles?: Phaser.Physics.Arcade.StaticGroup;
   private score: number = 0;
   private scoreText?: Phaser.GameObjects.Text;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private gameTitle?: Phaser.GameObjects.Text;
+  private instructionText?: Phaser.GameObjects.Text;
+  private sinaTexture?: Phaser.Textures.Canvas;
+  private cristinaTexture?: Phaser.Textures.Canvas;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
@@ -17,7 +22,7 @@ export class SimpleGameScene extends Phaser.Scene {
   preload() {
     console.log("SimpleGameScene preload started");
     
-    // Generate colored rectangles for game objects directly instead of loading external assets
+    // Generate all textures for the game
     this.generateGameAssets();
     
     console.log("SimpleGameScene preload completed");
@@ -27,17 +32,173 @@ export class SimpleGameScene extends Phaser.Scene {
     console.log("Generating game assets locally");
     
     try {
-      // Generate ground texture (green rectangle)
-      this.generateTexture('ground', 400, 50, 0x009900);
+      // Generate platform textures
+      this.generateTexture('ground', 800, 20, 0xBBBBBB, (ctx) => {
+        // Add some texture to ground
+        ctx.fillStyle = '#999999';
+        for (let i = 0; i < 800; i += 20) {
+          for (let j = 0; j < 20; j += 5) {
+            if ((i + j) % 3 === 0) {
+              ctx.fillRect(i, j, 3, 2);
+            }
+          }
+        }
+      });
       
-      // Generate platform texture (lighter green rectangle)
-      this.generateTexture('platform', 200, 30, 0x00aa00);
+      this.generateTexture('platform', 200, 15, 0x8B4513, (ctx) => {
+        // Add wood texture to platforms
+        ctx.fillStyle = '#6B3304';
+        for (let i = 0; i < 200; i += 10) {
+          ctx.fillRect(i, 0, 1, 15);
+        }
+      });
       
-      // Generate player texture (blue rectangle)
-      this.generateTexture('player', 32, 48, 0x0000ff);
+      this.generateTexture('shelf', 100, 10, 0xA67C52, (ctx) => {
+        // Add wood grain texture
+        ctx.fillStyle = '#8B5A2B';
+        for (let i = 0; i < 100; i += 8) {
+          ctx.fillRect(i, 2, 1, 8);
+        }
+      });
       
-      // Generate star texture (yellow circle)
-      this.generateCircleTexture('star', 12, 0xffff00);
+      // Generate player character - office worker 
+      this.generateTexture('player', 32, 48, 0, (ctx) => {
+        // Draw a more detailed character - blue shirt, dark pants
+        // Body - blue shirt
+        ctx.fillStyle = '#2957ab';
+        ctx.fillRect(8, 15, 16, 20);
+        
+        // Pants
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(8, 35, 16, 13);
+        
+        // Head
+        ctx.fillStyle = '#ffd699';
+        ctx.beginPath();
+        ctx.arc(16, 10, 8, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Hair
+        ctx.fillStyle = '#663300';
+        ctx.beginPath();
+        ctx.arc(16, 7, 8, Math.PI, 0, true);
+        ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(13, 10, 1, 0, Math.PI * 2);
+        ctx.arc(19, 10, 1, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Smile
+        ctx.beginPath();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.arc(16, 13, 3, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+      });
+      
+      // Generate obstacle textures
+      this.generateTexture('tree', 40, 60, 0, (ctx) => {
+        // Tree trunk
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(15, 40, 10, 20);
+        
+        // Tree leaves
+        ctx.fillStyle = '#228B22';
+        ctx.beginPath();
+        ctx.moveTo(20, 0);
+        ctx.lineTo(2, 40);
+        ctx.lineTo(38, 40);
+        ctx.closePath();
+        ctx.fill();
+      });
+      
+      this.generateTexture('computer', 35, 30, 0, (ctx) => {
+        // Monitor
+        ctx.fillStyle = '#333333';
+        ctx.fillRect(2, 2, 31, 20);
+        
+        // Screen
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(5, 5, 25, 14);
+        
+        // Stand
+        ctx.fillStyle = '#555555';
+        ctx.fillRect(15, 22, 5, 8);
+        ctx.fillRect(10, 28, 15, 2);
+      });
+      
+      this.generateTexture('desk', 200, 15, 0x8B4513, (ctx) => {
+        // Add wood texture to desk
+        ctx.fillStyle = '#6B3304';
+        for (let i = 0; i < 200; i += 15) {
+          ctx.fillRect(i, 2, 2, 11);
+        }
+      });
+      
+      // Create Sina face
+      this.generateCircleTexture('sina-coin', 15, 0xFFD700, (ctx) => {
+        // Draw face
+        ctx.fillStyle = '#FFF6E5';
+        ctx.beginPath();
+        ctx.arc(15, 15, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Hair
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(15, 12, 10, Math.PI, 0, true);
+        ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(12, 15, 1.5, 0, Math.PI * 2);
+        ctx.arc(18, 15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Smile
+        ctx.beginPath();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.arc(15, 18, 4, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+      });
+      
+      // Create Cristina face
+      this.generateCircleTexture('cristina-coin', 15, 0xFFD700, (ctx) => {
+        // Draw face
+        ctx.fillStyle = '#FFF6E5';
+        ctx.beginPath();
+        ctx.arc(15, 15, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Hair
+        ctx.fillStyle = '#8B4513';
+        ctx.beginPath();
+        ctx.arc(15, 12, 10, Math.PI, 0, true);
+        ctx.fill();
+        
+        // Longer hair on sides
+        ctx.fillRect(5, 12, 3, 10);
+        ctx.fillRect(22, 12, 3, 10);
+        
+        // Eyes
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(12, 15, 1.5, 0, Math.PI * 2);
+        ctx.arc(18, 15, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Smile
+        ctx.beginPath();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.arc(15, 18, 4, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+      });
       
       console.log("All game textures generated successfully");
     } catch (error) {
@@ -48,34 +209,90 @@ export class SimpleGameScene extends Phaser.Scene {
     }
   }
   
-  generateTexture(key: string, width: number, height: number, color: number) {
+  generateTexture(key: string, width: number, height: number, color: number, callback?: (ctx: CanvasRenderingContext2D) => void) {
     const graphics = this.add.graphics();
     graphics.fillStyle(color, 1);
     graphics.fillRect(0, 0, width, height);
+    
+    // Generate the base texture
     graphics.generateTexture(key, width, height);
+    
+    // If we have a callback for adding details, create a canvas texture
+    if (callback) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill with base color
+        ctx.fillStyle = color ? '#' + color.toString(16).padStart(6, '0') : 'transparent';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Call the callback to add details
+        callback(ctx);
+        
+        // Create a new texture from the canvas
+        this.textures.addCanvas(key, canvas);
+      }
+    }
+    
     graphics.clear();
-    console.log(`Created rectangle texture: ${key}`);
+    console.log(`Created texture: ${key}`);
   }
   
-  generateCircleTexture(key: string, radius: number, color: number) {
+  generateCircleTexture(key: string, radius: number, color: number, callback?: (ctx: CanvasRenderingContext2D) => void) {
+    const diameter = radius * 2;
     const graphics = this.add.graphics();
     graphics.fillStyle(color, 1);
     graphics.fillCircle(radius, radius, radius);
-    graphics.generateTexture(key, radius * 2, radius * 2);
+    
+    // Generate the base texture
+    graphics.generateTexture(key, diameter, diameter);
+    
+    // If we have a callback for adding details, create a canvas texture
+    if (callback) {
+      const canvas = document.createElement('canvas');
+      canvas.width = diameter;
+      canvas.height = diameter;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        // Fill with base color
+        ctx.fillStyle = color ? '#' + color.toString(16).padStart(6, '0') : 'transparent';
+        ctx.beginPath();
+        ctx.arc(radius, radius, radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Call the callback to add details
+        callback(ctx);
+        
+        // Create a new texture from the canvas
+        this.textures.addCanvas(key, canvas);
+      }
+    }
+    
     graphics.clear();
     console.log(`Created circle texture: ${key}`);
   }
   
   generateFallbackTextures() {
     // Even simpler fallback textures if the first attempt fails
-    const keys = ['ground', 'platform', 'player', 'star'];
-    const colors = [0x009900, 0x00aa00, 0x0000ff, 0xffff00];
+    const keys = ['ground', 'platform', 'player', 'star', 'tree', 'computer', 'desk', 'sina-coin', 'cristina-coin'];
+    const colors = [0x999999, 0x8B4513, 0x0000FF, 0xFFD700, 0x228B22, 0x333333, 0x8B4513, 0xFFD700, 0xFFD700];
     
     keys.forEach((key, index) => {
       const graphics = this.add.graphics();
       graphics.fillStyle(colors[index], 1);
-      graphics.fillRect(0, 0, 50, 50);
-      graphics.generateTexture(key, 50, 50);
+      
+      if (key.includes('coin')) {
+        graphics.fillCircle(15, 15, 15);
+        graphics.generateTexture(key, 30, 30);
+      } else {
+        graphics.fillRect(0, 0, 50, 50);
+        graphics.generateTexture(key, 50, 50);
+      }
+      
       graphics.clear();
     });
     
@@ -86,19 +303,57 @@ export class SimpleGameScene extends Phaser.Scene {
     console.log("SimpleGameScene create started");
     
     try {
-      // Set a simple background color
+      // Set background color
       this.cameras.main.setBackgroundColor('#87CEEB');
+      
+      // Add game title
+      this.gameTitle = this.add.text(400, 30, 'Office Escape 🏃‍♂️ 🏃‍♀️', { 
+        fontSize: '28px',
+        color: '#7B5CCC',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+      
+      // Add game instructions
+      this.instructionText = this.add.text(400, 70, 
+        'Dodge obstacles and collect coins—they\'re your colleagues, Sina and Cristina!\n' +
+        'Everything except coins and trees will take you out! You can jump on the shelves!',
+        { 
+          fontSize: '14px',
+          color: '#666666',
+          align: 'center'
+        }
+      ).setOrigin(0.5);
+      
+      // Create control instructions
+      this.add.text(650, 180, 'Arrow Keys/WASD to move, Up/Space to jump', { 
+        fontSize: '12px',
+        color: '#FFFFFF',
+        backgroundColor: '#333333',
+        padding: { x: 10, y: 5 }
+      }).setOrigin(0.5);
       
       // Create static platforms
       this.platforms = this.physics.add.staticGroup();
       
       // Create the ground
-      this.platforms.create(400, 568, 'ground').setScale(2).refreshBody();
+      this.platforms.create(400, 580, 'ground').setScale(2).refreshBody();
       
       // Create platforms
-      this.platforms.create(600, 400, 'platform');
-      this.platforms.create(50, 250, 'platform');
-      this.platforms.create(750, 220, 'platform');
+      this.platforms.create(600, 450, 'desk');
+      this.platforms.create(50, 380, 'platform');
+      this.platforms.create(750, 350, 'platform');
+      this.platforms.create(400, 300, 'platform');
+      this.platforms.create(200, 250, 'shelf');
+      this.platforms.create(500, 200, 'shelf');
+      
+      // Add trees on some platforms
+      this.obstacles = this.physics.add.staticGroup();
+      this.obstacles.create(200, 220, 'tree');
+      this.obstacles.create(400, 270, 'tree');
+      this.obstacles.create(600, 420, 'tree');
+      
+      // Add a computer on a desk
+      this.obstacles.create(400, 285, 'computer');
       
       // Create player with physics
       this.player = this.physics.add.sprite(100, 450, 'player');
@@ -109,32 +364,65 @@ export class SimpleGameScene extends Phaser.Scene {
       this.physics.add.collider(this.player, this.platforms);
       
       // Create stars
-      this.stars = this.physics.add.group({
-        key: 'star',
-        repeat: 11,
-        setXY: { x: 12, y: 0, stepX: 70 }
-      });
+      this.stars = this.physics.add.group();
       
-      // Properly use the children.iterate method with type safety
-      if (this.stars.children && typeof this.stars.children.iterate === 'function') {
-        this.stars.children.iterate((child: any) => {
-          const c = child as Phaser.Physics.Arcade.Image;
-          c.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-          return true;
-        });
+      // Create Sina coins
+      for (let i = 0; i < 5; i++) {
+        const x = Phaser.Math.Between(50, 750);
+        const y = Phaser.Math.Between(0, 300);
+        const star = this.stars.create(x, y, 'sina-coin');
+        star.setBounce(Phaser.Math.FloatBetween(0.4, 0.8));
+        star.setCollideWorldBounds(true);
+      }
+      
+      // Create Cristina coins
+      for (let i = 0; i < 5; i++) {
+        const x = Phaser.Math.Between(50, 750);
+        const y = Phaser.Math.Between(0, 300);
+        const star = this.stars.create(x, y, 'cristina-coin');
+        star.setBounce(Phaser.Math.FloatBetween(0.4, 0.8));
+        star.setCollideWorldBounds(true);
       }
       
       this.physics.add.collider(this.stars, this.platforms);
       this.physics.add.overlap(this.player, this.stars, this.collectStar, null, this);
       
       // Add score text
-      this.scoreText = this.add.text(16, 16, 'Score: 0', { 
-        fontSize: '32px', 
-        color: '#000' 
+      this.scoreText = this.add.text(50, 180, 'Score: 0', { 
+        fontSize: '24px', 
+        color: '#fff',
+        backgroundColor: '#333',
+        padding: { x: 10, y: 5 }
       });
       
       // Add cursor keys
       this.cursors = this.input.keyboard.createCursorKeys();
+      
+      // Add WASD keys as alternative controls
+      this.input.keyboard.on('keydown-W', () => {
+        this.cursors.up.isDown = true;
+      });
+      this.input.keyboard.on('keyup-W', () => {
+        this.cursors.up.isDown = false;
+      });
+      this.input.keyboard.on('keydown-A', () => {
+        this.cursors.left.isDown = true;
+      });
+      this.input.keyboard.on('keyup-A', () => {
+        this.cursors.left.isDown = false;
+      });
+      this.input.keyboard.on('keydown-D', () => {
+        this.cursors.right.isDown = true;
+      });
+      this.input.keyboard.on('keyup-D', () => {
+        this.cursors.right.isDown = false;
+      });
+      this.input.keyboard.on('keydown-SPACE', () => {
+        this.cursors.up.isDown = true;
+      });
+      this.input.keyboard.on('keyup-SPACE', () => {
+        this.cursors.up.isDown = false;
+      });
       
       console.log("SimpleGameScene create completed successfully");
     } catch (error) {
@@ -155,16 +443,14 @@ export class SimpleGameScene extends Phaser.Scene {
     }
     
     if (this.stars && this.stars.countActive(true) === 0) {
-      // Properly use the children.iterate method with type safety
-      if (this.stars.children && typeof this.stars.children.iterate === 'function') {
-        this.stars.children.iterate((child: any) => {
-          const c = child as Phaser.Physics.Arcade.Image;
-          if (c && typeof c.enableBody === 'function') {
-            c.enableBody(true, c.x, 0, true, true);
-          }
-          return true;
-        });
-      }
+      // Respawn all stars
+      this.stars.children.iterate((child: any) => {
+        const c = child as Phaser.Physics.Arcade.Image;
+        if (c && typeof c.enableBody === 'function') {
+          c.enableBody(true, Phaser.Math.Between(50, 750), 0, true, true);
+        }
+        return true;
+      });
     }
   }
   
@@ -179,8 +465,9 @@ export class SimpleGameScene extends Phaser.Scene {
       this.player.setVelocityX(0);
     }
     
+    // Allow jumping when touching the ground
     if (this.cursors.up.isDown && this.player.body.touching.down) {
-      this.player.setVelocityY(-330);
+      this.player.setVelocityY(-400);
     }
   }
 }
