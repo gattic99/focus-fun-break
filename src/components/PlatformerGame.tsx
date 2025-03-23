@@ -47,6 +47,10 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   
   const handleRetry = () => {
     console.log("Manual retry requested");
+    // Reset any previously loaded assets
+    if (gameContainerRef.current) {
+      gameContainerRef.current.innerHTML = '';
+    }
     retryInitialization();
   };
   
@@ -58,6 +62,9 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     document.dispatchEvent(event);
     // Also dispatch to window for Phaser to catch it
     window.dispatchEvent(event);
+    
+    // Log key events to help debug
+    console.log(`Dispatched key event: ${eventType} - ${key}`);
   };
   
   const handleLeftPress = () => createKeyEvent('ArrowLeft', true);

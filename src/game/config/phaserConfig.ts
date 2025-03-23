@@ -37,10 +37,16 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
     disableContextMenu: true,
     pixelArt: false,
     antialias: true,
+    audio: {
+      disableWebAudio: false,
+      noAudio: false
+    },
     // Improved asset URL handling for extension context
     loader: {
       baseURL: './',
-      path: ''
+      path: '',
+      maxParallelDownloads: 5,
+      crossOrigin: 'anonymous'
     }
   };
 };

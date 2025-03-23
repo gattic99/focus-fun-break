@@ -12,6 +12,7 @@ export class SimpleGameScene extends Phaser.Scene {
   private gameTitle?: Phaser.GameObjects.Text;
   private instructionText?: Phaser.GameObjects.Text;
   private bgMusic?: Phaser.Sound.BaseSound;
+  private assetsLoaded: boolean = false;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
@@ -21,11 +22,24 @@ export class SimpleGameScene extends Phaser.Scene {
   preload() {
     console.log("SimpleGameScene preload started");
     
+    // Create a loading text
+    this.add.text(400, 300, 'Loading game assets...', {
+      fontSize: '18px',
+      color: '#FFFFFF',
+      backgroundColor: '#000000',
+      padding: { x: 10, y: 5 }
+    }).setOrigin(0.5);
+    
+    // Setup error handling for the loader
+    this.load.on('loaderror', (fileObj) => {
+      console.error('Error loading asset:', fileObj.key);
+    });
+    
     // Load the actual image assets
     this.load.image('sina-coin', 'assets/coin-sina.png');
     this.load.image('cristina-coin', 'assets/coin-cristina.png');
     
-    // Load audio
+    // Load audio with explicit error handling
     this.load.audio('background-music', 'assets/office-ambience.mp3');
     
     // Generate all textures for the game
@@ -265,13 +279,19 @@ export class SimpleGameScene extends Phaser.Scene {
       // Set background color
       this.cameras.main.setBackgroundColor('#87CEEB');
       
-      // Start background music
-      this.bgMusic = this.sound.add('background-music', {
-        volume: 0.5,
-        loop: true
-      });
-      this.bgMusic.play();
-      console.log("Started background music");
+      // Start background music with error handling
+      try {
+        if (this.sound.locked) {
+          // If audio is locked (common on mobile), wait for it to unlock
+          this.sound.once('unlocked', () => {
+            this.startBackgroundMusic();
+          });
+        } else {
+          this.startBackgroundMusic();
+        }
+      } catch (error) {
+        console.error("Error starting background music:", error);
+      }
       
       // Add game title
       this.gameTitle = this.add.text(400, 30, 'Office Escape 🏃‍♂️ 🏃‍♀️', { 
@@ -362,44 +382,78 @@ export class SimpleGameScene extends Phaser.Scene {
         padding: { x: 10, y: 5 }
       });
       
-      // Add cursor keys
-      this.cursors = this.input.keyboard.createCursorKeys();
+      // Set up cursor keys
+      this.setupControls();
       
-      // Add WASD keys as alternative controls
-      this.input.keyboard.on('keydown-W', () => {
-        this.cursors.up.isDown = true;
-      });
-      this.input.keyboard.on('keyup-W', () => {
-        this.cursors.up.isDown = false;
-      });
-      this.input.keyboard.on('keydown-A', () => {
-        this.cursors.left.isDown = true;
-      });
-      this.input.keyboard.on('keyup-A', () => {
-        this.cursors.left.isDown = false;
-      });
-      this.input.keyboard.on('keydown-D', () => {
-        this.cursors.right.isDown = true;
-      });
-      this.input.keyboard.on('keyup-D', () => {
-        this.cursors.right.isDown = false;
-      });
-      this.input.keyboard.on('keydown-SPACE', () => {
-        this.cursors.up.isDown = true;
-      });
-      this.input.keyboard.on('keyup-SPACE', () => {
-        this.cursors.up.isDown = false;
-      });
-      
+      this.assetsLoaded = true;
       console.log("SimpleGameScene create completed successfully");
     } catch (error) {
       console.error("Error in create method:", error);
       // Add a text message in the center of the screen to indicate the error
+      this.clearScene();
       this.add.text(400, 300, 'Game Error: Please try again', {
         fontSize: '24px',
         color: '#FF0000'
       }).setOrigin(0.5);
     }
+  }
+  
+  startBackgroundMusic() {
+    try {
+      this.bgMusic = this.sound.add('background-music', {
+        volume: 0.5,
+        loop: true
+      });
+      this.bgMusic.play();
+      console.log("Started background music");
+    } catch (error) {
+      console.error("Failed to start background music:", error);
+    }
+  }
+  
+  setupControls() {
+    // Add cursor keys
+    this.cursors = this.input.keyboard.createCursorKeys();
+    
+    // Add WASD keys as alternative controls
+    this.input.keyboard.on('keydown-W', () => {
+      if (this.cursors) this.cursors.up.isDown = true;
+    });
+    this.input.keyboard.on('keyup-W', () => {
+      if (this.cursors) this.cursors.up.isDown = false;
+    });
+    this.input.keyboard.on('keydown-A', () => {
+      if (this.cursors) this.cursors.left.isDown = true;
+    });
+    this.input.keyboard.on('keyup-A', () => {
+      if (this.cursors) this.cursors.left.isDown = false;
+    });
+    this.input.keyboard.on('keydown-D', () => {
+      if (this.cursors) this.cursors.right.isDown = true;
+    });
+    this.input.keyboard.on('keyup-D', () => {
+      if (this.cursors) this.cursors.right.isDown = false;
+    });
+    
+    // Add Space key for jumping
+    this.input.keyboard.on('keydown-SPACE', () => {
+      if (this.cursors) this.cursors.up.isDown = true;
+    });
+    this.input.keyboard.on('keyup-SPACE', () => {
+      if (this.cursors) this.cursors.up.isDown = false;
+    });
+  }
+  
+  clearScene() {
+    // Clear existing game objects in case we need to reset
+    if (this.platforms) this.platforms.clear(true, true);
+    if (this.stars) this.stars.clear(true, true);
+    if (this.obstacles) this.obstacles.clear(true, true);
+    if (this.player) this.player.destroy();
+    if (this.scoreText) this.scoreText.destroy();
+    if (this.gameTitle) this.gameTitle.destroy();
+    if (this.instructionText) this.instructionText.destroy();
+    if (this.bgMusic && this.bgMusic.isPlaying) this.bgMusic.stop();
   }
   
   collectStar(player: Phaser.Physics.Arcade.Sprite, star: Phaser.Physics.Arcade.Image) {
@@ -422,7 +476,7 @@ export class SimpleGameScene extends Phaser.Scene {
   }
   
   update() {
-    if (!this.player || !this.cursors) return;
+    if (!this.player || !this.cursors || !this.assetsLoaded) return;
     
     if (this.cursors.left.isDown) {
       this.player.setVelocityX(-160);

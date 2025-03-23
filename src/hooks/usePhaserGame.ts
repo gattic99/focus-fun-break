@@ -41,15 +41,8 @@ export const usePhaserGame = (containerRef: React.RefObject<HTMLDivElement>) => 
       clientHeight: containerRef.current.clientHeight
     });
     
-    // Check if Phaser is available globally
-    const isPhaserAvailable = typeof window !== 'undefined' && 
-                             window.Phaser !== undefined && 
-                             typeof window.Phaser === 'object';
-    
-    console.log("Phaser available globally:", isPhaserAvailable);
-    
-    // If Phaser isn't available globally, check if it's available as an import
-    if (!isPhaserAvailable && typeof Phaser === 'undefined') {
+    // Ensure Phaser is available
+    if (typeof Phaser === 'undefined') {
       console.error("Phaser is not defined");
       setErrorState("Game engine not available - Phaser not defined");
       return;
@@ -63,10 +56,12 @@ export const usePhaserGame = (containerRef: React.RefObject<HTMLDivElement>) => 
       try {
         console.log(`Initializing Phaser game (attempt ${initAttempts.current})`);
         
-        // Create the container element is absolutely positioned and visible
-        containerRef.current.style.position = 'relative';
-        containerRef.current.style.visibility = 'visible';
-        containerRef.current.style.zIndex = '1';
+        // Set container styles for proper rendering
+        if (containerRef.current) {
+          containerRef.current.style.position = 'relative';
+          containerRef.current.style.visibility = 'visible';
+          containerRef.current.style.zIndex = '1';
+        }
         
         // Create and start the game with the container reference
         const config = createGameConfig(containerRef.current);
@@ -82,23 +77,14 @@ export const usePhaserGame = (containerRef: React.RefObject<HTMLDivElement>) => 
           // Set a timeout to check if the game initialized successfully
           const successCheckTimer = setTimeout(() => {
             if (gameInstanceRef.current && 
-                gameInstanceRef.current.isBooted && 
-                gameInstanceRef.current.scene.scenes.length > 0) {
+                gameInstanceRef.current.isBooted) {
               console.log("Phaser game initialized successfully!");
               setGameInitialized(true);
+              setErrorState(null);
             } else {
               console.error("Phaser game created but failed to initialize properly");
               setErrorState("Game failed to initialize properly");
-              
-              // Try to clean up the failed instance
-              if (gameInstanceRef.current) {
-                try {
-                  gameInstanceRef.current.destroy(true);
-                } catch (e) {
-                  console.error("Error destroying failed game instance:", e);
-                }
-                gameInstanceRef.current = null;
-              }
+              cleanupFailedGame();
             }
           }, 2000); // Give it 2 seconds to initialize
           
@@ -109,8 +95,20 @@ export const usePhaserGame = (containerRef: React.RefObject<HTMLDivElement>) => 
       } catch (error: any) {
         console.error("Error initializing Phaser game:", error);
         setErrorState(`Failed to start game: ${error.message}`);
+        cleanupFailedGame();
       }
     }, 500);
+
+    const cleanupFailedGame = () => {
+      if (gameInstanceRef.current) {
+        try {
+          gameInstanceRef.current.destroy(true);
+        } catch (e) {
+          console.error("Error destroying failed game instance:", e);
+        }
+        gameInstanceRef.current = null;
+      }
+    };
 
     // Clean up function to destroy the game when the component unmounts
     return () => {
