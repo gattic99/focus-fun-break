@@ -35,15 +35,12 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
     },
     // Set to false to avoid issues with browser scaling
     disableContextMenu: true,
-    render: {
-      pixelArt: false,
-      antialias: true,
-      // Disable roundPixels as it can cause rendering issues
-      roundPixels: false,
-      // Force canvas renderer which might be more reliable for dynamic textures
-      powerPreference: 'default',
-      clearBeforeRender: true,
-      premultipliedAlpha: false
+    pixelArt: false,
+    antialias: true,
+    // Improved asset URL handling for extension context
+    loader: {
+      baseURL: './',
+      path: ''
     }
   };
 };

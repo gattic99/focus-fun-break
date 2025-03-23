@@ -22,6 +22,10 @@ export class SimpleGameScene extends Phaser.Scene {
   preload() {
     console.log("SimpleGameScene preload started");
     
+    // Load the actual image assets from the extension
+    this.load.image('sina-coin', 'assets/coin-sina.png');
+    this.load.image('cristina-coin', 'assets/coin-cristina.png');
+    
     // Generate all textures for the game
     this.generateGameAssets();
     
@@ -138,79 +142,7 @@ export class SimpleGameScene extends Phaser.Scene {
         }
       });
       
-      // Create Sina face
-      this.sinaTexture = this.textures.get('sina-coin');
-      if (!this.sinaTexture || !this.sinaTexture.key) {
-        console.log("Generating Sina coin texture");
-        this.generateCircleTexture('sina-coin', 15, 0xFFD700, (ctx) => {
-          // Draw face
-          ctx.fillStyle = '#FFF6E5';
-          ctx.beginPath();
-          ctx.arc(15, 15, 10, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // Hair
-          ctx.fillStyle = '#000000';
-          ctx.beginPath();
-          ctx.arc(15, 12, 10, Math.PI, 0, true);
-          ctx.fill();
-          
-          // Eyes
-          ctx.fillStyle = '#000000';
-          ctx.beginPath();
-          ctx.arc(12, 15, 1.5, 0, Math.PI * 2);
-          ctx.arc(18, 15, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // Smile
-          ctx.beginPath();
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 1;
-          ctx.arc(15, 18, 4, 0.1, Math.PI - 0.1);
-          ctx.stroke();
-        });
-      } else {
-        console.log("Sina coin texture already exists");
-      }
-      
-      // Create Cristina face
-      this.cristinaTexture = this.textures.get('cristina-coin');
-      if (!this.cristinaTexture || !this.cristinaTexture.key) {
-        console.log("Generating Cristina coin texture");
-        this.generateCircleTexture('cristina-coin', 15, 0xFFD700, (ctx) => {
-          // Draw face
-          ctx.fillStyle = '#FFF6E5';
-          ctx.beginPath();
-          ctx.arc(15, 15, 10, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // Hair
-          ctx.fillStyle = '#8B4513';
-          ctx.beginPath();
-          ctx.arc(15, 12, 10, Math.PI, 0, true);
-          ctx.fill();
-          
-          // Longer hair on sides
-          ctx.fillRect(5, 12, 3, 10);
-          ctx.fillRect(22, 12, 3, 10);
-          
-          // Eyes
-          ctx.fillStyle = '#000000';
-          ctx.beginPath();
-          ctx.arc(12, 15, 1.5, 0, Math.PI * 2);
-          ctx.arc(18, 15, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // Smile
-          ctx.beginPath();
-          ctx.strokeStyle = '#000000';
-          ctx.lineWidth = 1;
-          ctx.arc(15, 18, 4, 0.1, Math.PI - 0.1);
-          ctx.stroke();
-        });
-      } else {
-        console.log("Cristina coin texture already exists");
-      }
+      // No need to generate coin textures as we're loading the assets directly
       
       console.log("All game textures generated successfully");
     } catch (error) {
@@ -222,6 +154,12 @@ export class SimpleGameScene extends Phaser.Scene {
   }
   
   generateTexture(key: string, width: number, height: number, color: number, callback?: (ctx: CanvasRenderingContext2D) => void) {
+    // Check if texture already exists to avoid duplicate creation
+    if (this.textures.exists(key)) {
+      console.log(`Texture ${key} already exists, skipping creation`);
+      return;
+    }
+    
     const graphics = this.add.graphics();
     graphics.fillStyle(color, 1);
     graphics.fillRect(0, 0, width, height);
@@ -259,6 +197,12 @@ export class SimpleGameScene extends Phaser.Scene {
   }
   
   generateCircleTexture(key: string, radius: number, color: number, callback?: (ctx: CanvasRenderingContext2D) => void) {
+    // Check if texture already exists
+    if (this.textures.exists(key)) {
+      console.log(`Texture ${key} already exists, skipping creation`);
+      return;
+    }
+    
     const diameter = radius * 2;
     const graphics = this.add.graphics();
     graphics.fillStyle(color, 1);
@@ -300,21 +244,14 @@ export class SimpleGameScene extends Phaser.Scene {
   
   generateFallbackTextures() {
     // Even simpler fallback textures if the first attempt fails
-    const keys = ['ground', 'platform', 'player', 'tree', 'computer', 'desk', 'sina-coin', 'cristina-coin'];
-    const colors = [0x999999, 0x8B4513, 0x0000FF, 0x228B22, 0x333333, 0x8B4513, 0xFFD700, 0xFFD700];
+    const keys = ['ground', 'platform', 'player', 'tree', 'computer', 'desk'];
+    const colors = [0x999999, 0x8B4513, 0x0000FF, 0x228B22, 0x333333, 0x8B4513];
     
     keys.forEach((key, index) => {
       const graphics = this.add.graphics();
       graphics.fillStyle(colors[index], 1);
-      
-      if (key.includes('coin')) {
-        graphics.fillCircle(15, 15, 15);
-        graphics.generateTexture(key, 30, 30);
-      } else {
-        graphics.fillRect(0, 0, 50, 50);
-        graphics.generateTexture(key, 50, 50);
-      }
-      
+      graphics.fillRect(0, 0, 50, 50);
+      graphics.generateTexture(key, 50, 50);
       graphics.clear();
     });
     
