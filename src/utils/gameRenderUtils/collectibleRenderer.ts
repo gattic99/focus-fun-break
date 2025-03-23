@@ -6,10 +6,10 @@ import { getExtensionURL } from "../chromeUtils";
 const sinaImage = new Image();
 // Add an onload handler to ensure the image is fully loaded before use
 sinaImage.onload = () => {
-  console.log("Coin image loaded successfully");
+  console.log("Sina coin image loaded successfully");
 };
 sinaImage.onerror = (err) => {
-  console.error("Error loading coin image:", err);
+  console.error("Error loading Sina coin image:", err);
 };
 sinaImage.src = getExtensionURL("/assets/coin-sina.png");
 
@@ -17,10 +17,10 @@ sinaImage.src = getExtensionURL("/assets/coin-sina.png");
 const cristinaImage = new Image();
 // Add an onload handler to ensure the image is fully loaded before use
 cristinaImage.onload = () => {
-  console.log("Coin image loaded successfully");
+  console.log("Cristina coin image loaded successfully");
 };
 cristinaImage.onerror = (err) => {
-  console.error("Error loading coin image:", err);
+  console.error("Error loading Cristina coin image:", err);
 };
 cristinaImage.src = getExtensionURL("/assets/coin-cristina.png");
 
@@ -75,8 +75,6 @@ export const drawCollectibles = (
         ctx.beginPath();
         ctx.arc(centerX, centerY, renderWidth / 2, 0, Math.PI * 2);
         ctx.stroke();
-
-        i++;
       }
     }
   });
