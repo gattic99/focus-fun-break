@@ -53,16 +53,27 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   // Event handlers for mobile controls
   const createKeyEvent = (key: string, isDown: boolean) => {
     const eventType = isDown ? 'keydown' : 'keyup';
+    // Create a keyboard event and dispatch it at the document level
     const event = new KeyboardEvent(eventType, { key });
     document.dispatchEvent(event);
+    // Also dispatch to window for Phaser to catch it
+    window.dispatchEvent(event);
   };
   
   const handleLeftPress = () => createKeyEvent('ArrowLeft', true);
   const handleLeftRelease = () => createKeyEvent('ArrowLeft', false);
   const handleRightPress = () => createKeyEvent('ArrowRight', true);
   const handleRightRelease = () => createKeyEvent('ArrowRight', false);
-  const handleJumpPress = () => createKeyEvent('ArrowUp', true);
-  const handleJumpRelease = () => createKeyEvent('ArrowUp', false);
+  const handleJumpPress = () => {
+    createKeyEvent('ArrowUp', true);
+    // Also trigger Space key for better jump detection
+    createKeyEvent('Space', true);
+  };
+  const handleJumpRelease = () => {
+    createKeyEvent('ArrowUp', false);
+    // Also release Space key
+    createKeyEvent('Space', false);
+  };
 
   return (
     <div className="break-card p-4 w-full max-w-[800px] mx-auto animate-scale-in bg-white bg-opacity-90 rounded-xl shadow-lg">

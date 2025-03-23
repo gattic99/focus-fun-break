@@ -11,6 +11,7 @@ export class SimpleGameScene extends Phaser.Scene {
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private gameTitle?: Phaser.GameObjects.Text;
   private instructionText?: Phaser.GameObjects.Text;
+  private bgMusic?: Phaser.Sound.BaseSound;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
@@ -20,9 +21,12 @@ export class SimpleGameScene extends Phaser.Scene {
   preload() {
     console.log("SimpleGameScene preload started");
     
-    // Load the actual image assets from the extension
+    // Load the actual image assets
     this.load.image('sina-coin', 'assets/coin-sina.png');
     this.load.image('cristina-coin', 'assets/coin-cristina.png');
+    
+    // Load audio
+    this.load.audio('background-music', 'assets/office-ambience.mp3');
     
     // Generate all textures for the game
     this.generateGameAssets();
@@ -260,6 +264,14 @@ export class SimpleGameScene extends Phaser.Scene {
     try {
       // Set background color
       this.cameras.main.setBackgroundColor('#87CEEB');
+      
+      // Start background music
+      this.bgMusic = this.sound.add('background-music', {
+        volume: 0.5,
+        loop: true
+      });
+      this.bgMusic.play();
+      console.log("Started background music");
       
       // Add game title
       this.gameTitle = this.add.text(400, 30, 'Office Escape 🏃‍♂️ 🏃‍♀️', { 
