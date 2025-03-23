@@ -11,8 +11,6 @@ export class SimpleGameScene extends Phaser.Scene {
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private gameTitle?: Phaser.GameObjects.Text;
   private instructionText?: Phaser.GameObjects.Text;
-  private sinaTexture?: any;
-  private cristinaTexture?: any;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
@@ -141,8 +139,6 @@ export class SimpleGameScene extends Phaser.Scene {
           ctx.fillRect(i, 2, 2, 11);
         }
       });
-      
-      // No need to generate coin textures as we're loading the assets directly
       
       console.log("All game textures generated successfully");
     } catch (error) {
