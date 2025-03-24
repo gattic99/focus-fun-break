@@ -20,11 +20,11 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
     width: width,
     height: height,
     parent: container || undefined,
-    backgroundColor: '#def3fd', // Light blue sky color
+    backgroundColor: '#def3fd',
     physics: {
       default: 'arcade',
       arcade: {
-        gravity: { x: 0, y: 300 },
+        gravity: { y: 300 },
         debug: false
       }
     },
@@ -33,19 +33,14 @@ export const createGameConfig = (container: HTMLElement | null): Phaser.Types.Co
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    // Set to false to avoid issues with browser scaling
-    disableContextMenu: true,
-    pixelArt: false,
-    antialias: true,
     audio: {
       disableWebAudio: false,
       noAudio: false
     },
-    // Improved asset URL handling for extension context
+    // Improved asset URL handling
     loader: {
       baseURL: './',
       path: '',
-      maxParallelDownloads: 5,
       crossOrigin: 'anonymous'
     }
   };

@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 
 export class SimpleGameScene extends Phaser.Scene {
@@ -30,19 +29,12 @@ export class SimpleGameScene extends Phaser.Scene {
       padding: { x: 10, y: 5 }
     }).setOrigin(0.5);
     
-    // Setup error handling for the loader
-    this.load.on('loaderror', (fileObj) => {
-      console.error('Error loading asset:', fileObj.key);
-    });
-    
-    // Load the actual image assets
+    // Load assets with explicit error handling
     this.load.image('sina-coin', 'assets/coin-sina.png');
     this.load.image('cristina-coin', 'assets/coin-cristina.png');
-    
-    // Load audio with explicit error handling
     this.load.audio('background-music', 'assets/office-ambience.mp3');
-    
-    // Generate all textures for the game
+
+    // Generate game assets
     this.generateGameAssets();
     
     console.log("SimpleGameScene preload completed");
@@ -279,19 +271,8 @@ export class SimpleGameScene extends Phaser.Scene {
       // Set background color
       this.cameras.main.setBackgroundColor('#87CEEB');
       
-      // Start background music with error handling
-      try {
-        if (this.sound.locked) {
-          // If audio is locked (common on mobile), wait for it to unlock
-          this.sound.once('unlocked', () => {
-            this.startBackgroundMusic();
-          });
-        } else {
-          this.startBackgroundMusic();
-        }
-      } catch (error) {
-        console.error("Error starting background music:", error);
-      }
+      // Start background music immediately
+      this.startBackgroundMusic();
       
       // Add game title
       this.gameTitle = this.add.text(400, 30, 'Office Escape 🏃‍♂️ 🏃‍♀️', { 
@@ -319,13 +300,11 @@ export class SimpleGameScene extends Phaser.Scene {
         padding: { x: 10, y: 5 }
       }).setOrigin(0.5);
       
-      // Create static platforms
+      // Create platforms, obstacles, and player
       this.platforms = this.physics.add.staticGroup();
       
-      // Create the ground
+      // Create the ground and platforms
       this.platforms.create(400, 580, 'ground').setScale(2).refreshBody();
-      
-      // Create platforms
       this.platforms.create(600, 450, 'desk');
       this.platforms.create(50, 380, 'platform');
       this.platforms.create(750, 350, 'platform');
@@ -333,16 +312,14 @@ export class SimpleGameScene extends Phaser.Scene {
       this.platforms.create(200, 250, 'shelf');
       this.platforms.create(500, 200, 'shelf');
       
-      // Add trees on some platforms
+      // Create obstacles
       this.obstacles = this.physics.add.staticGroup();
       this.obstacles.create(200, 220, 'tree');
       this.obstacles.create(400, 270, 'tree');
       this.obstacles.create(600, 420, 'tree');
-      
-      // Add a computer on a desk
       this.obstacles.create(400, 285, 'computer');
       
-      // Create player with physics
+      // Create player with proper physics
       this.player = this.physics.add.sprite(100, 450, 'player');
       this.player.setBounce(0.2);
       this.player.setCollideWorldBounds(true);
@@ -350,10 +327,10 @@ export class SimpleGameScene extends Phaser.Scene {
       // Add collider between player and platforms
       this.physics.add.collider(this.player, this.platforms);
       
-      // Create stars
+      // Create coins
       this.stars = this.physics.add.group();
       
-      // Create Sina coins
+      // Add Sina and Cristina coins
       for (let i = 0; i < 5; i++) {
         const x = Phaser.Math.Between(50, 750);
         const y = Phaser.Math.Between(0, 300);
@@ -362,7 +339,6 @@ export class SimpleGameScene extends Phaser.Scene {
         star.setCollideWorldBounds(true);
       }
       
-      // Create Cristina coins
       for (let i = 0; i < 5; i++) {
         const x = Phaser.Math.Between(50, 750);
         const y = Phaser.Math.Between(0, 300);
@@ -376,20 +352,29 @@ export class SimpleGameScene extends Phaser.Scene {
       
       // Add score text
       this.scoreText = this.add.text(50, 180, 'Score: 0', { 
-        fontSize: '24px', 
+        fontSize: '24px',
         color: '#fff',
         backgroundColor: '#333',
         padding: { x: 10, y: 5 }
       });
       
-      // Set up cursor keys
-      this.setupControls();
+      // Set up cursor keys with both arrow keys and WASD
+      this.cursors = this.input.keyboard.createCursorKeys();
+      
+      // Add Space key for jumping
+      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      
+      // Register WASD keys
+      this.input.keyboard.on('keydown-W', () => {
+        if (this.player && this.player.body.touching.down) {
+          this.player.setVelocityY(-400);
+        }
+      });
       
       this.assetsLoaded = true;
       console.log("SimpleGameScene create completed successfully");
     } catch (error) {
       console.error("Error in create method:", error);
-      // Add a text message in the center of the screen to indicate the error
       this.clearScene();
       this.add.text(400, 300, 'Game Error: Please try again', {
         fontSize: '24px',
@@ -400,48 +385,27 @@ export class SimpleGameScene extends Phaser.Scene {
   
   startBackgroundMusic() {
     try {
-      this.bgMusic = this.sound.add('background-music', {
-        volume: 0.5,
-        loop: true
-      });
-      this.bgMusic.play();
-      console.log("Started background music");
+      if (this.sound.locked) {
+        console.log("Audio is locked, waiting for unlock");
+        this.sound.once('unlocked', () => {
+          this.bgMusic = this.sound.add('background-music', {
+            volume: 0.5,
+            loop: true
+          });
+          this.bgMusic.play();
+          console.log("Background music started after unlock");
+        });
+      } else {
+        this.bgMusic = this.sound.add('background-music', {
+          volume: 0.5,
+          loop: true
+        });
+        this.bgMusic.play();
+        console.log("Background music started immediately");
+      }
     } catch (error) {
       console.error("Failed to start background music:", error);
     }
-  }
-  
-  setupControls() {
-    // Add cursor keys
-    this.cursors = this.input.keyboard.createCursorKeys();
-    
-    // Add WASD keys as alternative controls
-    this.input.keyboard.on('keydown-W', () => {
-      if (this.cursors) this.cursors.up.isDown = true;
-    });
-    this.input.keyboard.on('keyup-W', () => {
-      if (this.cursors) this.cursors.up.isDown = false;
-    });
-    this.input.keyboard.on('keydown-A', () => {
-      if (this.cursors) this.cursors.left.isDown = true;
-    });
-    this.input.keyboard.on('keyup-A', () => {
-      if (this.cursors) this.cursors.left.isDown = false;
-    });
-    this.input.keyboard.on('keydown-D', () => {
-      if (this.cursors) this.cursors.right.isDown = true;
-    });
-    this.input.keyboard.on('keyup-D', () => {
-      if (this.cursors) this.cursors.right.isDown = false;
-    });
-    
-    // Add Space key for jumping
-    this.input.keyboard.on('keydown-SPACE', () => {
-      if (this.cursors) this.cursors.up.isDown = true;
-    });
-    this.input.keyboard.on('keyup-SPACE', () => {
-      if (this.cursors) this.cursors.up.isDown = false;
-    });
   }
   
   clearScene() {
@@ -476,18 +440,25 @@ export class SimpleGameScene extends Phaser.Scene {
   }
   
   update() {
-    if (!this.player || !this.cursors || !this.assetsLoaded) return;
+    if (!this.player || !this.cursors || !this.assetsLoaded) {
+      return;
+    }
     
-    if (this.cursors.left.isDown) {
+    // Handle horizontal movement
+    if (this.cursors.left.isDown || this.input.keyboard.addKey('A').isDown) {
       this.player.setVelocityX(-160);
-    } else if (this.cursors.right.isDown) {
+    } else if (this.cursors.right.isDown || this.input.keyboard.addKey('D').isDown) {
       this.player.setVelocityX(160);
     } else {
       this.player.setVelocityX(0);
     }
     
-    // Allow jumping when touching the ground
-    if (this.cursors.up.isDown && this.player.body.touching.down) {
+    // Handle jumping with both Up arrow and Space
+    if ((this.cursors.up.isDown || 
+         this.cursors.space.isDown || 
+         this.input.keyboard.addKey('W').isDown) && 
+        this.player.body.touching.down) {
+      console.log("Jump triggered");
       this.player.setVelocityY(-400);
     }
   }
