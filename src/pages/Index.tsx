@@ -24,6 +24,7 @@ const Index: React.FC = () => {
         try {
           const storedSettings = await getFromLocalStorage<TimerSettings>('focusflow_settings');
           if (storedSettings) {
+            console.log("Loaded settings from storage:", storedSettings);
             setSettings(storedSettings);
           }
         } catch (error) {
@@ -69,6 +70,7 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
+        console.log("Focus duration saved:", newDuration);
       } catch (error) {
         console.error("Error saving focus duration:", error);
       }
@@ -76,6 +78,7 @@ const Index: React.FC = () => {
   };
 
   const handleBreakDurationChange = async (newDuration: number) => {
+    console.log("Setting break duration to:", newDuration);
     const newSettings = {
       ...settings,
       breakDuration: newDuration
@@ -91,6 +94,7 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
+        console.log("Break duration saved:", newDuration);
       } catch (error) {
         console.error("Error saving break duration:", error);
       }
