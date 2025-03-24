@@ -4,7 +4,6 @@ import { Coffee, Minus, Plus, ChevronDown, ChevronUp, ChevronRight } from "lucid
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "./ui/input";
-import { toast } from "sonner";
 
 interface BreakDurationDialogProps {
   breakDuration: number;
@@ -23,7 +22,6 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   
   // Update local state when prop changes
   useEffect(() => {
-    console.log("BreakDurationDialog - breakDuration prop updated:", breakDuration);
     setTempDuration(breakDuration);
     setInputValue(breakDuration.toString());
   }, [breakDuration]);
@@ -46,12 +44,6 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
-    
-    // Try to parse immediately so UI updates faster
-    const parsedValue = parseInt(e.target.value);
-    if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 15) {
-      setTempDuration(parsedValue);
-    }
   };
   
   const handleInputBlur = () => {
@@ -59,9 +51,7 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
     if (!isNaN(newValue) && newValue >= 1 && newValue <= 15) {
       setTempDuration(newValue);
     } else {
-      // Reset to last valid value if input is invalid
       setInputValue(tempDuration.toString());
-      toast.error("Please enter a number between 1 and 15 minutes");
     }
   };
   
@@ -72,15 +62,9 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   };
   
   const handleSave = () => {
-    // Make sure the value is valid before passing to parent
-    const valueToSave = Math.min(Math.max(1, Number(tempDuration)), 15);
-    
-    console.log(`Saving break duration: ${valueToSave} minutes`);
-    onChangeBreakDuration(valueToSave);
+    // Make sure we're passing the numeric value, not a string
+    onChangeBreakDuration(Number(tempDuration));
     setIsOpen(false);
-    
-    // Show confirmation to user
-    toast.success(`Break duration set to ${valueToSave} minute${valueToSave !== 1 ? 's' : ''}`);
   };
   
   const handleCancel = () => {
@@ -132,8 +116,6 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
                   onBlur={handleInputBlur}
                   onKeyDown={handleKeyDown}
                   className="w-12 h-12 p-0 text-4xl text-center font-bold text-focus-purple border-none bg-transparent focus:ring-0"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
                 />
                 <span className="text-sm ml-1 text-focus-purple">min</span>
               </div>
@@ -147,10 +129,7 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
               <Button variant="outline" className="py-1.5 px-3 text-gray-700 border-gray-200 bg-gray-50 hover:bg-gray-200 rounded-full text-xs" onClick={handleCancel}>
                 Cancel <ChevronRight size={14} className="ml-1" />
               </Button>
-              <Button 
-                className="py-1.5 px-3 bg-focus-purple text-white hover:bg-focus-purple-dark rounded-full text-xs" 
-                onClick={handleSave}
-              >
+              <Button className="py-1.5 px-3 bg-focus-purple text-white hover:bg-focus-purple-dark rounded-full text-xs" onClick={handleSave} disabled={tempDuration === breakDuration}>
                 Save <ChevronRight size={14} className="ml-1" />
               </Button>
             </div>

@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button"; // Add Button import
 import { defaultTimerSettings } from "@/utils/timerUtils";
 import { useTimer } from "@/hooks/useTimer";
 import FocusMode from "@/components/FocusMode";
@@ -9,45 +8,31 @@ import BreakMode from "@/components/BreakMode";
 import { TimerSettings } from "@/types";
 import { X } from "lucide-react";
 import FloatingTimer from "@/components/FloatingTimer";
+import PlatformerGame from "@/components/PlatformerGame";
 import ChatBubble from "@/components/Chat/ChatBubble";
 import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
-import { toast } from "sonner";
-import PlatformerGame from "@/components/PlatformerGame";
 
 const Index: React.FC = () => {
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
   const [isTimerOpen, setIsTimerOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [gameError, setGameError] = useState<string | null>(null);
 
+  // Load settings from storage on initial render
   useEffect(() => {
     const loadSettings = async () => {
       if (isExtensionContext()) {
         try {
           const storedSettings = await getFromLocalStorage<TimerSettings>('focusflow_settings');
           if (storedSettings) {
-            console.log("Loaded settings from storage:", storedSettings);
             setSettings(storedSettings);
-          } else {
-            console.log("No stored settings found, using defaults:", defaultTimerSettings);
           }
         } catch (error) {
           console.error("Error loading settings:", error);
-          console.log("Using default settings instead:", defaultTimerSettings);
         }
       }
     };
     
     loadSettings();
-    
-    // Check if Phaser is available
-    if (typeof window !== 'undefined') {
-      if (!window.Phaser) {
-        console.warn("Phaser not detected on window object");
-      } else {
-        console.log("Phaser detected on window object:", window.Phaser);
-      }
-    }
   }, []);
 
   const {
@@ -63,23 +48,12 @@ const Index: React.FC = () => {
   });
 
   useEffect(() => {
-    console.log("Index component - timerState updated:", {
-      mode: timerState.mode,
-      isRunning: timerState.isRunning,
-      timeRemaining: timerState.timeRemaining,
-      breakActivity: timerState.breakActivity,
-      completed: timerState.completed
-    });
-  }, [timerState]);
-
-  useEffect(() => {
     if (timerState.mode === 'break' && timerState.completed) {
       openTimerPopup();
     }
   }, [timerState.mode, timerState.completed]);
 
   const handleFocusDurationChange = async (newDuration: number) => {
-    console.log("Changing focus duration to:", newDuration);
     const newSettings = {
       ...settings,
       focusDuration: newDuration
@@ -87,6 +61,7 @@ const Index: React.FC = () => {
     setSettings(newSettings);
     updateFocusDuration(newDuration);
     
+    // Save settings to Chrome storage and notify background script
     if (isExtensionContext()) {
       try {
         await saveToLocalStorage('focusflow_settings', newSettings);
@@ -94,7 +69,6 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
-        console.log("Focus duration saved:", newDuration);
       } catch (error) {
         console.error("Error saving focus duration:", error);
       }
@@ -102,7 +76,6 @@ const Index: React.FC = () => {
   };
 
   const handleBreakDurationChange = async (newDuration: number) => {
-    console.log("Setting break duration to:", newDuration);
     const newSettings = {
       ...settings,
       breakDuration: newDuration
@@ -110,6 +83,7 @@ const Index: React.FC = () => {
     setSettings(newSettings);
     updateBreakDuration(newDuration);
     
+    // Save settings to Chrome storage and notify background script
     if (isExtensionContext()) {
       try {
         await saveToLocalStorage('focusflow_settings', newSettings);
@@ -117,18 +91,15 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
-        console.log("Break duration saved:", newDuration);
-        toast.success(`Break duration set to ${newDuration} minutes`);
       } catch (error) {
         console.error("Error saving break duration:", error);
-        toast.error("Failed to save break duration");
       }
     }
   };
 
   const openTimerPopup = () => {
     setIsTimerOpen(true);
-    setIsChatOpen(false);
+    setIsChatOpen(false); // Close chat when timer is opened
   };
 
   const closeTimerPopup = () => {
@@ -136,78 +107,34 @@ const Index: React.FC = () => {
   };
 
   const handleStartTimer = () => {
-    console.log("Starting timer...");
     startTimer();
-    toast.success("Timer started!");
     if (timerState.mode === 'focus') {
       closeTimerPopup();
     }
   };
 
-  const handlePauseTimer = () => {
-    console.log("Pausing timer...");
-    pauseTimer();
-    toast.info("Timer paused");
-  };
-
-  const handleResetTimer = (mode: 'focus' | 'break') => {
-    console.log(`Resetting ${mode} timer...`);
-    resetTimer(mode);
-    toast.info(`${mode.charAt(0).toUpperCase() + mode.slice(1)} timer reset`);
-  };
-
   const handleReturnFromGame = () => {
-    console.log("Returning from game to break mode");
     selectBreakActivity(null);
-    setGameError(null);
   };
 
+  // Pass state setters to ChatBubble
   const handleOpenChat = () => {
     setIsChatOpen(true);
-    setIsTimerOpen(false);
+    setIsTimerOpen(false); // Close timer when chat is opened
   };
 
   const handleCloseChat = () => {
     setIsChatOpen(false);
   };
 
-  // Use a more resilient approach for the game state
-  const renderGameComponent = () => {
-    console.log("Rendering game component with timerState:", timerState);
-    try {
-      return (
-        <div className="w-full max-w-[800px] mx-auto p-4">
-          <PlatformerGame 
-            onReturn={handleReturnFromGame} 
-            timerState={timerState} 
-            onStart={startTimer} 
-            onPause={pauseTimer} 
-          />
-        </div>
-      );
-    } catch (err) {
-      console.error("Error rendering game component:", err);
-      setGameError(err.message);
-      // Fallback content when game rendering fails
-      return (
-        <div className="w-full max-w-[800px] mx-auto p-4 text-center">
-          <h2 className="text-xl font-bold mb-2">Game Loading Error</h2>
-          <p className="text-red-500 mb-4">{err.message}</p>
-          <Button onClick={handleReturnFromGame}>
-            Return to Break Timer
-          </Button>
-        </div>
-      );
-    }
-  };
-
   if (timerState.mode === 'break' && timerState.breakActivity === 'game') {
-    console.log("Index rendering PlatformerGame directly");
-    return renderGameComponent();
+    return <PlatformerGame onReturn={handleReturnFromGame} timerState={timerState} onStart={startTimer} onPause={pauseTimer} />;
   }
 
   return (
     <div>
+      {/* Removed the FigmaBackground component */}
+      
       <ChatBubble 
         isOpen={isChatOpen}
         onOpen={handleOpenChat}
@@ -240,8 +167,8 @@ const Index: React.FC = () => {
               ? <FocusMode 
                   timerState={timerState} 
                   onStart={handleStartTimer} 
-                  onPause={handlePauseTimer} 
-                  onReset={() => handleResetTimer('focus')} 
+                  onPause={pauseTimer} 
+                  onReset={() => resetTimer('focus')} 
                   focusDuration={settings.focusDuration} 
                   breakDuration={settings.breakDuration} 
                   onChangeFocusDuration={handleFocusDurationChange} 
@@ -250,8 +177,8 @@ const Index: React.FC = () => {
               : <BreakMode 
                   timerState={timerState} 
                   onStart={handleStartTimer} 
-                  onPause={handlePauseTimer} 
-                  onReset={() => handleResetTimer('break')} 
+                  onPause={pauseTimer} 
+                  onReset={() => resetTimer('break')} 
                   onSelectActivity={selectBreakActivity} 
                   breakDuration={settings.breakDuration} 
                   onChangeBreakDuration={handleBreakDurationChange} 

@@ -1,13 +1,9 @@
 
 import { toast } from "sonner";
 
-// Use a more reliable backend URL that we control
+// Always use the deployed backend API URL
 const getBackendUrl = () => {
-  // For development and testing, use a local server
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000';
-  }
-  // For production, use our deployed backend with fallback
+  // Always use the deployed backend regardless of environment
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -38,33 +34,15 @@ export const isApiKeyValidated = (): boolean => {
 };
 
 export const validateApiKey = async (): Promise<boolean> => {
-  console.log("Checking if API is available...");
-  
-  // First check if we're online
-  if (!navigator.onLine) {
-    console.log("Device is offline - API not available");
-    return false;
-  }
-  
   // Check if our backend API is available
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-    
-    console.log("Attempting to connect to backend:", getBackendUrl());
     const response = await fetch(`${getBackendUrl()}/api/health`, {
-      method: 'GET',
-      // Use no-cors mode to avoid CORS issues
-      mode: 'no-cors',
-      signal: controller.signal
+      // Adding timeout to avoid long waits on network errors
+      signal: AbortSignal.timeout(5000)
     });
-    
-    clearTimeout(timeoutId);
-    console.log("API available:", response.ok);
-    return true; // If we get here without an error, we'll consider it a success
+    return response.ok;
   } catch (error) {
     console.error("Error checking backend health:", error);
-    console.log("API available: false");
     // Don't show error toast during initial silent check
     return false;
   }
@@ -85,66 +63,51 @@ const fallbackResponses = [
 ];
 
 export const getAIResponse = async (message: string): Promise<string> => {
-  console.log("Trying to get AI response for:", message);
-  
   // First, check if we're offline
   if (!navigator.onLine) {
-    console.log("Offline mode - using fallback response");
     return getFallbackResponse(message);
   }
 
   try {
-    // Quick health check with no-cors mode
-    const isApiAvailable = await validateApiKey();
-    if (!isApiAvailable) {
-      console.log("API unavailable - using fallback response");
+    // Call our secure backend instead of OpenAI directly
+    const response = await fetch(`${getBackendUrl()}/api/health`, {
+      // Quick check if API is available before sending actual request
+      method: "GET",
+      signal: AbortSignal.timeout(2000)
+    });
+    
+    if (!response.ok) {
+      // If health check fails, return fallback without showing error
       return getFallbackResponse(message);
     }
     
-    const backendUrl = getBackendUrl();
-    console.log("Using backend URL:", backendUrl);
-    
-    // Try the chat request with CORS enabled
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    try {
-      console.log("Sending chat request to backend");
-      const chatResponse = await fetch(`${backendUrl}/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ message }),
-        signal: controller.signal
-      });
+    // If health check passes, proceed with actual request
+    const chatResponse = await fetch(`${getBackendUrl()}/api/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message }),
+      // Adding timeout to avoid long waits
+      signal: AbortSignal.timeout(10000)
+    });
 
-      clearTimeout(timeoutId);
-
-      if (!chatResponse.ok) {
-        const errorData = await chatResponse.text();
-        console.warn("Backend API error:", errorData);
-        return getFallbackResponse(message);
-      }
-
-      const data = await chatResponse.json();
-      console.log("Received response from API");
-      return data.content;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error("Error fetching AI response:", error);
+    if (!chatResponse.ok) {
+      const errorData = await chatResponse.text();
+      console.warn("Backend API error:", errorData);
       return getFallbackResponse(message);
     }
+
+    const data = await chatResponse.json();
+    return data.content;
   } catch (error) {
-    console.error("Error in getAIResponse:", error);
+    console.error("Error fetching AI response:", error);
     return getFallbackResponse(message);
   }
 };
 
 // Improved function to get a fallback response when the API is unavailable
 function getFallbackResponse(message: string): string {
-  console.log("Using fallback response for:", message);
-  
   // For simple questions, provide standard responses
   if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
     return "Hello! I'm your productivity assistant. How can I help you today?";

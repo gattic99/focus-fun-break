@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Timer from "./Timer";
 import { TimerState, BreakActivity } from "@/types";
 import { formatTime } from "@/utils/timerUtils";
@@ -7,7 +6,6 @@ import PlatformerGame from "./PlatformerGame";
 import RelaxGuide from "./RelaxGuide";
 import { AlarmClock, Gamepad, Dumbbell, ChevronRight } from "lucide-react";
 import { Button } from "./ui/button";
-import { toast } from "sonner";
 
 interface BreakModeProps {
   timerState: TimerState;
@@ -29,49 +27,30 @@ const BreakMode: React.FC<BreakModeProps> = ({
   onChangeBreakDuration
 }) => {
   const { breakActivity, timeRemaining, isRunning } = timerState;
-  const [isTransitioning, setIsTransitioning] = useState(false);
   
-  // Log when break mode renders to help with debugging
-  useEffect(() => {
-    console.log("BreakMode rendering with state:", {
-      breakActivity,
-      isRunning,
-      timeRemaining
-    });
-  }, [breakActivity, isRunning, timeRemaining]);
-  
-  // Handle activity selection with transition state
-  const handleSelectActivity = (activity: BreakActivity) => {
-    console.log(`Selecting activity: ${activity}`);
-    setIsTransitioning(true);
-    
-    // Small delay to avoid UI flicker
-    setTimeout(() => {
-      onSelectActivity(activity);
-      setIsTransitioning(false);
-    }, 100);
-  };
-  
-  if (isTransitioning) {
-    return (
-      <div className="flex items-center justify-center p-6">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-focus-purple"></div>
+  // Display the timer at the top of the break mode
+  const displayTimer = () => (
+    <div className="mb-4">
+      <Timer timerState={timerState} />
+      <div className="flex justify-center gap-4 mt-2">
+        <Button variant="outline" onClick={onReset} disabled={!isRunning} className="border-gray-300 text-gray-700 font-semibold px-6 py-1.5 rounded-full text-sm h-9">
+          Reset <ChevronRight size={16} className="ml-1" />
+        </Button>
+        
+        <Button onClick={isRunning ? onPause : onStart} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
+          {isRunning ? "Pause" : "Start"} <ChevronRight size={16} className="ml-1" />
+        </Button>
       </div>
-    );
-  }
+    </div>
+  );
   
   if (breakActivity === 'game') {
-    console.log("Rendering PlatformerGame component");
-    return (
-      <div className="w-full max-w-[800px] mx-auto">
-        <PlatformerGame 
-          onReturn={() => onSelectActivity(null)} 
-          timerState={timerState} 
-          onStart={onStart} 
-          onPause={onPause} 
-        />
-      </div>
-    );
+    return <PlatformerGame 
+      onReturn={() => onSelectActivity(null)} 
+      timerState={timerState} 
+      onStart={onStart} 
+      onPause={onPause} 
+    />;
   }
   
   if (breakActivity === 'relax') {
@@ -90,27 +69,15 @@ const BreakMode: React.FC<BreakModeProps> = ({
           Take a moment to relax. Choose an activity below.
         </p>
         
-        {/* Use the Timer component with the appropriate props */}
-        <div className="mb-4 mt-4">
-          <Timer 
-            timerState={timerState} 
-            onStart={onStart}
-            onPause={onPause}
-            onReset={onReset}
-            totalDuration={breakDuration * 60}
-          />
-        </div>
+        {/* Display the timer in break mode */}
+        {displayTimer()}
       </div>
       
       <div className="mt-4">
         <div className="grid grid-cols-2 gap-3">
           <div 
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
-            onClick={() => {
-              console.log("Game activity clicked");
-              toast.info("Loading game...");
-              handleSelectActivity('game');
-            }}
+            onClick={() => onSelectActivity('game')}
           >
             <Gamepad size={22} className="mb-2 text-focus-purple" />
             <h4 className="text-sm font-medium">Play Game <ChevronRight size={14} className="inline-block ml-1" /></h4>
@@ -119,7 +86,7 @@ const BreakMode: React.FC<BreakModeProps> = ({
           <div 
             className="bg-white bg-opacity-80 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-sm p-3 flex flex-col items-center animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors" 
             style={{ animationDelay: '0.1s' }}
-            onClick={() => handleSelectActivity('relax')}
+            onClick={() => onSelectActivity('relax')}
           >
             <Dumbbell size={22} className="mb-2 text-focus-purple" />
             <h4 className="text-sm font-medium">Relax & Stretch <ChevronRight size={14} className="inline-block ml-1" /></h4>
