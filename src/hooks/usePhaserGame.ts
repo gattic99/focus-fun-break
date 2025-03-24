@@ -61,6 +61,9 @@ export const usePhaserGame = (containerRef: React.RefObject<HTMLDivElement>) => 
           containerRef.current.style.position = 'relative';
           containerRef.current.style.visibility = 'visible';
           containerRef.current.style.zIndex = '1';
+          
+          // Force a reflow to ensure the container is ready
+          void containerRef.current.offsetWidth;
         }
         
         // Create and start the game with the container reference

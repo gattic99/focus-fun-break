@@ -12,6 +12,8 @@ export class SimpleGameScene extends Phaser.Scene {
   private instructionText?: Phaser.GameObjects.Text;
   private bgMusic?: Phaser.Sound.BaseSound;
   private assetsLoaded: boolean = false;
+  private spaceKey?: Phaser.Input.Keyboard.Key;
+  private wKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super({ key: 'SimpleGameScene' });
@@ -361,15 +363,10 @@ export class SimpleGameScene extends Phaser.Scene {
       // Set up cursor keys with both arrow keys and WASD
       this.cursors = this.input.keyboard.createCursorKeys();
       
-      // Add Space key for jumping
-      this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-      
-      // Register WASD keys
-      this.input.keyboard.on('keydown-W', () => {
-        if (this.player && this.player.body.touching.down) {
-          this.player.setVelocityY(-400);
-        }
-      });
+      // Add Space key for jumping - explicit definition
+      this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      // Add W key for jumping
+      this.wKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W);
       
       this.assetsLoaded = true;
       console.log("SimpleGameScene create completed successfully");
@@ -445,21 +442,26 @@ export class SimpleGameScene extends Phaser.Scene {
     }
     
     // Handle horizontal movement
-    if (this.cursors.left.isDown || this.input.keyboard.addKey('A').isDown) {
+    if (this.cursors.left.isDown || this.input.keyboard.checkDown(this.input.keyboard.addKey('A'), 150)) {
       this.player.setVelocityX(-160);
-    } else if (this.cursors.right.isDown || this.input.keyboard.addKey('D').isDown) {
+    } else if (this.cursors.right.isDown || this.input.keyboard.checkDown(this.input.keyboard.addKey('D'), 150)) {
       this.player.setVelocityX(160);
     } else {
       this.player.setVelocityX(0);
     }
     
-    // Handle jumping with both Up arrow and Space
-    if ((this.cursors.up.isDown || 
-         this.cursors.space.isDown || 
-         this.input.keyboard.addKey('W').isDown) && 
+    // Handle jumping with both Up arrow, Space, and W keys
+    if ((this.cursors.up?.isDown || 
+         this.spaceKey?.isDown || 
+         this.wKey?.isDown) && 
         this.player.body.touching.down) {
       console.log("Jump triggered");
       this.player.setVelocityY(-400);
     }
+    
+    // Log key states for debugging
+    if (this.cursors.up?.isDown) console.log("Up arrow is down");
+    if (this.spaceKey?.isDown) console.log("Space key is down");
+    if (this.wKey?.isDown) console.log("W key is down");
   }
 }

@@ -54,17 +54,36 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     retryInitialization();
   };
   
-  // Event handlers for mobile controls
+  // Event handlers for mobile controls - make sure these properly handle keyboard events
   const createKeyEvent = (key: string, isDown: boolean) => {
-    const eventType = isDown ? 'keydown' : 'keyup';
-    // Create a keyboard event and dispatch it at the document level
-    const event = new KeyboardEvent(eventType, { key });
-    document.dispatchEvent(event);
-    // Also dispatch to window for Phaser to catch it
-    window.dispatchEvent(event);
+    const eventName = isDown ? 'keydown' : 'keyup';
     
-    // Log key events to help debug
-    console.log(`Dispatched key event: ${eventType} - ${key}`);
+    // Create a proper KeyboardEvent
+    const event = new KeyboardEvent(eventName, { 
+      key: key,
+      code: key === 'ArrowUp' ? 'ArrowUp' : 
+            key === 'ArrowLeft' ? 'ArrowLeft' : 
+            key === 'ArrowRight' ? 'ArrowRight' : 
+            key === 'Space' ? 'Space' : key,
+      keyCode: key === 'ArrowUp' ? 38 : 
+               key === 'ArrowLeft' ? 37 : 
+               key === 'ArrowRight' ? 39 : 
+               key === 'Space' ? 32 : 0,
+      which: key === 'ArrowUp' ? 38 : 
+             key === 'ArrowLeft' ? 37 : 
+             key === 'ArrowRight' ? 39 : 
+             key === 'Space' ? 32 : 0,
+      bubbles: true
+    });
+    
+    // Dispatch at different levels to ensure capture
+    window.dispatchEvent(event);
+    document.dispatchEvent(event);
+    if (gameContainerRef.current) {
+      gameContainerRef.current.dispatchEvent(event);
+    }
+    
+    console.log(`Dispatched key event: ${eventName} - ${key}`);
   };
   
   const handleLeftPress = () => createKeyEvent('ArrowLeft', true);
@@ -88,6 +107,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
         id="phaser-game" 
         ref={gameContainerRef} 
         className={`mb-4 w-full h-[500px] bg-gray-100 rounded-lg overflow-hidden relative transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        tabIndex={0} // Make sure the container can receive keyboard events
       >
         <LoadingState 
           isLoading={!gameInitialized && !errorState} 
