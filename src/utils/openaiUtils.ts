@@ -8,7 +8,7 @@ const getBackendUrl = () => {
     return 'http://localhost:3000'; // Use local backend in development
   }
   // For production and preview environments
-  return 'https://focus-flow-ai-backend.onrender.com';
+  return 'https://focus-flow-ai-backend.onrender.com'; // Update this with your actual deployed backend URL
 };
 
 // These functions are kept for backward compatibility but are now simplified
@@ -44,27 +44,23 @@ export const validateApiKey = async (): Promise<boolean> => {
       // Adding timeout to avoid long waits on network errors
       signal: AbortSignal.timeout(5000)
     });
-    return response.ok;
+    
+    if (response.ok) {
+      const data = await response.json();
+      // If backend responds but doesn't have OpenAI configured, still return true
+      // but show a notification that simulated responses will be used
+      if (!data.aiAvailable) {
+        console.info("Backend is available but using simulated AI responses");
+      }
+      return true;
+    }
+    return false;
   } catch (error) {
     console.error("Error checking backend health:", error);
     // Don't show error toast during initial silent check
     return false;
   }
 };
-
-// Enhanced fallback responses for when the API is unavailable
-const fallbackResponses = [
-  "I'm here to help you stay focused and productive. What would you like assistance with today?",
-  "Having a productive day? I can suggest techniques to help you maintain focus.",
-  "Looking for a productivity tip? Regular breaks can actually improve your overall focus and output.",
-  "Need help organizing your tasks? I recommend prioritizing them by importance and urgency.",
-  "Remember that taking short breaks during focused work can help prevent burnout and maintain productivity.",
-  "Is there something specific about productivity or focus that you'd like to learn more about?",
-  "The Pomodoro Technique involves 25-minute focused work sessions followed by 5-minute breaks. Would you like to try it?",
-  "Setting clear goals for each work session can significantly improve your productivity and focus.",
-  "I'm here to support your productivity journey. What challenges are you facing today?",
-  "Sometimes a change of environment can help refresh your focus. Have you tried working from a different location?"
-];
 
 export const getAIResponse = async (message: string): Promise<string> => {
   // First, check if we're offline
@@ -93,6 +89,10 @@ export const getAIResponse = async (message: string): Promise<string> => {
     
     // If we got a valid response, return it
     if (data && data.content) {
+      // If response indicates we're using fallback mode, log it
+      if (data.usingFallback) {
+        console.info("Using fallback AI responses (no API key on server)");
+      }
       return data.content;
     } else {
       console.warn("Invalid response from backend:", data);
@@ -119,7 +119,21 @@ function getFallbackResponse(message: string): string {
     return "You're welcome! Feel free to ask if you need more assistance.";
   }
   
-  // For other queries, return a random fallback response
+  // For other queries, return a random fallback response from the backend
+  // These are duplicated here in case the backend is completely unreachable
+  const fallbackResponses = [
+    "I'm here to help you stay focused and productive. What would you like assistance with today?",
+    "Having a productive day? I can suggest techniques to help you maintain focus.",
+    "Looking for a productivity tip? Regular breaks can actually improve your overall focus and output.",
+    "Need help organizing your tasks? I recommend prioritizing them by importance and urgency.",
+    "Remember that taking short breaks during focused work can help prevent burnout and maintain productivity.",
+    "Is there something specific about productivity or focus that you'd like to learn more about?",
+    "The Pomodoro Technique involves 25-minute focused work sessions followed by 5-minute breaks. Would you like to try it?",
+    "Setting clear goals for each work session can significantly improve your productivity and focus.",
+    "I'm here to support your productivity journey. What challenges are you facing today?",
+    "Sometimes a change of environment can help refresh your focus. Have you tried working from a different location?"
+  ];
+  
   const randomIndex = Math.floor(Math.random() * fallbackResponses.length);
   return fallbackResponses[randomIndex];
 }
