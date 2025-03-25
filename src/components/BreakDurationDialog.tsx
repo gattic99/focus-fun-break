@@ -23,7 +23,6 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
   
   // Update local state when prop changes
   useEffect(() => {
-    console.log("BreakDurationDialog - breakDuration prop updated:", breakDuration);
     setTempDuration(breakDuration);
     setInputValue(breakDuration.toString());
   }, [breakDuration]);
@@ -132,8 +131,6 @@ const BreakDurationDialog: React.FC<BreakDurationDialogProps> = ({
                   onBlur={handleInputBlur}
                   onKeyDown={handleKeyDown}
                   className="w-12 h-12 p-0 text-4xl text-center font-bold text-focus-purple border-none bg-transparent focus:ring-0"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
                 />
                 <span className="text-sm ml-1 text-focus-purple">min</span>
               </div>

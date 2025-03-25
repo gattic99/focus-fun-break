@@ -45,9 +45,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
     });
   }, [timerState]);
   
-  // Update input value when focus duration changes
   useEffect(() => {
-    console.log("Focus duration updated to:", focusDuration);
     setInputValue(focusDuration.toString());
   }, [focusDuration]);
 
@@ -128,17 +126,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
               
               <div className="flex items-baseline">
                 <div className="relative w-12 text-center">
-                  <Input 
-                    type="text" 
-                    value={inputValue} 
-                    onChange={handleInputChange} 
-                    onBlur={handleInputBlur} 
-                    onKeyDown={handleKeyDown} 
-                    disabled={timerState.isRunning} 
-                    className="w-full text-center font-bold text-focus-purple text-base px-0 py-0.5 border-none focus:ring-0 focus:outline-none h-7" 
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                  />
+                  <Input type="text" value={inputValue} onChange={handleInputChange} onBlur={handleInputBlur} onKeyDown={handleKeyDown} disabled={timerState.isRunning} className="w-full text-center font-bold text-focus-purple text-base px-0 py-0.5 border-none focus:ring-0 focus:outline-none h-7" />
                   <span className="text-xs ml-0.5 text-focus-purple">min</span>
                 </div>
               </div>
