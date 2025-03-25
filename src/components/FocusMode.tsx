@@ -79,7 +79,6 @@ const FocusMode: React.FC<FocusModeProps> = ({
       onChangeFocusDuration(newValue);
     } else {
       setInputValue(focusDuration.toString());
-      toast.error("Please enter a value between 1 and 120");
     }
   };
   
