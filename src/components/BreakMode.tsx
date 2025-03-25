@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import Timer from "./Timer";
 import { TimerState, BreakActivity } from "@/types";
@@ -28,21 +29,14 @@ const BreakMode: React.FC<BreakModeProps> = ({
 }) => {
   const { breakActivity, timeRemaining, isRunning } = timerState;
   
-  // Display the timer at the top of the break mode
-  const displayTimer = () => (
-    <div className="mb-4">
-      <Timer timerState={timerState} />
-      <div className="flex justify-center gap-4 mt-2">
-        <Button variant="outline" onClick={onReset} disabled={!isRunning} className="border-gray-300 text-gray-700 font-semibold px-6 py-1.5 rounded-full text-sm h-9">
-          Reset <ChevronRight size={16} className="ml-1" />
-        </Button>
-        
-        <Button onClick={isRunning ? onPause : onStart} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
-          {isRunning ? "Pause" : "Start"} <ChevronRight size={16} className="ml-1" />
-        </Button>
-      </div>
-    </div>
-  );
+  // Log when break mode renders to help with debugging
+  useEffect(() => {
+    console.log("BreakMode rendering with state:", {
+      breakActivity,
+      isRunning,
+      timeRemaining
+    });
+  }, [breakActivity, isRunning, timeRemaining]);
   
   if (breakActivity === 'game') {
     return <PlatformerGame 
@@ -69,8 +63,16 @@ const BreakMode: React.FC<BreakModeProps> = ({
           Take a moment to relax. Choose an activity below.
         </p>
         
-        {/* Display the timer in break mode */}
-        {displayTimer()}
+        {/* Use the Timer component with the appropriate props */}
+        <div className="mb-4 mt-4">
+          <Timer 
+            timerState={timerState} 
+            onStart={onStart}
+            onPause={onPause}
+            onReset={onReset}
+            totalDuration={breakDuration * 60}
+          />
+        </div>
       </div>
       
       <div className="mt-4">

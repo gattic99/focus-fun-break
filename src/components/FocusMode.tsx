@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Timer from "./Timer";
 import { TimerState } from "@/types";
@@ -7,6 +8,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import BreakDurationDialog from "./BreakDurationDialog";
+import { toast } from "sonner";
 
 interface FocusModeProps {
   timerState: TimerState;
@@ -33,9 +35,25 @@ const FocusMode: React.FC<FocusModeProps> = ({
   const [inputValue, setInputValue] = useState(focusDuration.toString());
   const [isBreakOpen, setIsBreakOpen] = useState(false);
   
+  // Debug logs to track timer state changes
   useEffect(() => {
+    console.log("FocusMode timerState changed:", { 
+      isRunning: timerState.isRunning,
+      timeRemaining: timerState.timeRemaining,
+      mode: timerState.mode,
+      completed: timerState.completed
+    });
+  }, [timerState]);
+  
+  // Update input value when focus duration changes
+  useEffect(() => {
+    console.log("Focus duration updated to:", focusDuration);
     setInputValue(focusDuration.toString());
   }, [focusDuration]);
+
+  useEffect(() => {
+    console.log("Break duration updated to:", breakDuration);
+  }, [breakDuration]);
 
   const decreaseFocusDuration = () => {
     if (focusDuration > 1) {
@@ -63,12 +81,23 @@ const FocusMode: React.FC<FocusModeProps> = ({
       onChangeFocusDuration(newValue);
     } else {
       setInputValue(focusDuration.toString());
+      toast.error("Please enter a value between 1 and 120");
     }
   };
   
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.currentTarget.blur();
+    }
+  };
+
+  const handleStartOrPause = () => {
+    if (timerState.isRunning) {
+      onPause();
+      toast.info("Timer paused");
+    } else {
+      onStart();
+      toast.success("Timer started");
     }
   };
   
@@ -83,7 +112,13 @@ const FocusMode: React.FC<FocusModeProps> = ({
         </div>
         
         <div className="relative">
-          <Timer timerState={timerState} totalDuration={totalDuration} />
+          <Timer 
+            timerState={timerState} 
+            totalDuration={totalDuration} 
+            onStart={onStart}
+            onPause={onPause}
+            onReset={onReset}
+          />
           
           <div className="mt-0 text-center">
             <div className="flex items-center justify-center gap-2">
@@ -93,7 +128,17 @@ const FocusMode: React.FC<FocusModeProps> = ({
               
               <div className="flex items-baseline">
                 <div className="relative w-12 text-center">
-                  <Input type="text" value={inputValue} onChange={handleInputChange} onBlur={handleInputBlur} onKeyDown={handleKeyDown} disabled={timerState.isRunning} className="w-full text-center font-bold text-focus-purple text-base px-0 py-0.5 border-none focus:ring-0 focus:outline-none h-7" />
+                  <Input 
+                    type="text" 
+                    value={inputValue} 
+                    onChange={handleInputChange} 
+                    onBlur={handleInputBlur} 
+                    onKeyDown={handleKeyDown} 
+                    disabled={timerState.isRunning} 
+                    className="w-full text-center font-bold text-focus-purple text-base px-0 py-0.5 border-none focus:ring-0 focus:outline-none h-7" 
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
                   <span className="text-xs ml-0.5 text-focus-purple">min</span>
                 </div>
               </div>
@@ -110,7 +155,7 @@ const FocusMode: React.FC<FocusModeProps> = ({
             Reset <ChevronRight size={16} className="ml-1" />
           </Button>
           
-          <Button onClick={timerState.isRunning ? onPause : onStart} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
+          <Button onClick={handleStartOrPause} className="bg-focus-purple hover:bg-focus-purple-dark text-white font-semibold px-6 py-1.5 rounded-full text-sm h-9">
             {timerState.isRunning ? "Pause" : "Start"} <ChevronRight size={16} className="ml-1" />
           </Button>
         </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+  const [apiAvailable, setApiAvailable] = useState(true);
   
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
@@ -48,21 +50,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Check API availability on mount
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
+        console.log("Checking API status...");
         const isAvailable = await validateApiKey();
+        console.log("API available:", isAvailable);
+        setApiAvailable(isAvailable);
+        
         if (!isAvailable) {
           console.log("AI service unavailable - using fallback responses");
+          toast.warning("AI chat using offline mode - limited responses available");
         }
       } catch (error) {
         console.log("Error checking API status:", error);
+        setApiAvailable(false);
       }
     };
     
     checkApiStatus();
   }, []);
 
+  // Load conversations from storage
   useEffect(() => {
     const loadStoredConversations = async () => {
       try {
@@ -114,6 +124,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     loadStoredConversations();
   }, []);
 
+  // Listen for state changes from other tabs
   useEffect(() => {
     const unsubscribe = listenForStateChanges((key, value) => {
       if (key === STORAGE_KEY && value) {
@@ -137,6 +148,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return unsubscribe;
   }, [activeConversationId]);
 
+  // Save conversations to storage
   useEffect(() => {
     if (conversations.length > 0) {
       if (isExtensionContext()) {
@@ -147,6 +159,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [conversations]);
 
+  // Create new conversation if none exists
   useEffect(() => {
     if (conversations.length === 0) {
       createNewConversation();
@@ -157,6 +170,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Auto-scroll and focus input when chat is opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
@@ -166,6 +180,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [isOpen, activeConversationId]);
 
+  // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
@@ -247,7 +262,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
+      console.log("Getting AI response for:", userMessage.content);
       const aiContent = await getAIResponse(userMessage.content);
+      console.log("Received AI response:", aiContent);
       
       const newMessage: ChatMessageProps = {
         role: "assistant",
@@ -303,6 +320,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div className="flex items-center">
               <Bot className="text-focus-purple mr-2" size={20} />
               <h2 className="font-semibold">AI Assistant</h2>
+              {!apiAvailable && (
+                <span className="ml-2 text-xs px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full">
+                  Offline Mode
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button

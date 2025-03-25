@@ -1,10 +1,24 @@
 
 import { toast } from "sonner";
 
-// Always use the deployed backend API URL
+// Define backend service URLs with proper fallback
+const PRODUCTION_BACKEND_URL = 'https://focus-flow-ai-backend.onrender.com';
+const DEVELOPMENT_BACKEND_URL = 'http://localhost:3000';
+
+// Get the appropriate backend URL based on environment
 const getBackendUrl = () => {
-  // Always use the deployed backend regardless of environment
-  return 'https://focus-flow-ai-backend.onrender.com';
+  // Check for running in extension context
+  if (typeof chrome !== 'undefined' && chrome.runtime) {
+    return PRODUCTION_BACKEND_URL;
+  }
+  
+  // For development and testing
+  if (process.env.NODE_ENV === 'development') {
+    return DEVELOPMENT_BACKEND_URL;
+  }
+  
+  // Default to production backend
+  return PRODUCTION_BACKEND_URL;
 };
 
 // These functions are kept for backward compatibility but are now simplified
@@ -33,14 +47,30 @@ export const isApiKeyValidated = (): boolean => {
   return true;
 };
 
+// Improved validation check with better error handling
 export const validateApiKey = async (): Promise<boolean> => {
-  // Check if our backend API is available
   try {
-    const response = await fetch(`${getBackendUrl()}/api/health`, {
-      // Adding timeout to avoid long waits on network errors
-      signal: AbortSignal.timeout(5000)
+    console.log("Checking backend API status...");
+    const backendUrl = getBackendUrl();
+    console.log("Using backend URL:", backendUrl);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${backendUrl}/api/health`, {
+      method: 'GET',
+      signal: controller.signal
     });
-    return response.ok;
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      console.log("Backend health check failed with status:", response.status);
+      return false;
+    }
+    
+    console.log("Backend health check passed");
+    return true;
   } catch (error) {
     console.error("Error checking backend health:", error);
     // Don't show error toast during initial silent check
@@ -62,52 +92,61 @@ const fallbackResponses = [
   "Sometimes a change of environment can help refresh your focus. Have you tried working from a different location?"
 ];
 
+// Improved AI response function with better error handling and offline support
 export const getAIResponse = async (message: string): Promise<string> => {
+  console.log("Getting AI response for:", message);
+  
   // First, check if we're offline
   if (!navigator.onLine) {
+    console.log("Offline mode - using fallback response");
     return getFallbackResponse(message);
   }
 
   try {
-    // Call our secure backend instead of OpenAI directly
-    const response = await fetch(`${getBackendUrl()}/api/health`, {
-      // Quick check if API is available before sending actual request
-      method: "GET",
-      signal: AbortSignal.timeout(2000)
-    });
+    const backendUrl = getBackendUrl();
+    console.log("Using backend URL for chat:", backendUrl);
     
-    if (!response.ok) {
-      // If health check fails, return fallback without showing error
-      return getFallbackResponse(message);
-    }
+    // Try to make the actual request with a reasonable timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     
-    // If health check passes, proceed with actual request
-    const chatResponse = await fetch(`${getBackendUrl()}/api/chat`, {
+    const chatResponse = await fetch(`${backendUrl}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ message }),
-      // Adding timeout to avoid long waits
-      signal: AbortSignal.timeout(10000)
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     if (!chatResponse.ok) {
       const errorData = await chatResponse.text();
       console.warn("Backend API error:", errorData);
+      toast.error("Unable to connect to AI service, using offline response");
       return getFallbackResponse(message);
     }
 
     const data = await chatResponse.json();
+    console.log("Received response from API");
     return data.content;
   } catch (error) {
     console.error("Error fetching AI response:", error);
+    
+    // Only show the toast if it's not an abort error (user intentionally cancelled)
+    if (!(error instanceof DOMException && error.name === "AbortError")) {
+      toast.error("Unable to connect to AI service, using offline response");
+    }
+    
     return getFallbackResponse(message);
   }
 };
 
 // Improved function to get a fallback response when the API is unavailable
 function getFallbackResponse(message: string): string {
+  console.log("Using fallback response for:", message);
+  
   // For simple questions, provide standard responses
   if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
     return "Hello! I'm your productivity assistant. How can I help you today?";
