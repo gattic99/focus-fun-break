@@ -3,7 +3,11 @@ import { toast } from "sonner";
 
 // Always use the deployed backend API URL
 const getBackendUrl = () => {
-  // Always use the deployed backend regardless of environment
+  // Check if in development environment (localhost)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:3000'; // Use local backend in development
+  }
+  // For production and preview environments
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -69,19 +73,7 @@ export const getAIResponse = async (message: string): Promise<string> => {
   }
 
   try {
-    // Call our secure backend instead of OpenAI directly
-    const response = await fetch(`${getBackendUrl()}/api/health`, {
-      // Quick check if API is available before sending actual request
-      method: "GET",
-      signal: AbortSignal.timeout(2000)
-    });
-    
-    if (!response.ok) {
-      // If health check fails, return fallback without showing error
-      return getFallbackResponse(message);
-    }
-    
-    // If health check passes, proceed with actual request
+    // Make a proper request to our backend API
     const chatResponse = await fetch(`${getBackendUrl()}/api/chat`, {
       method: "POST",
       headers: {
@@ -93,13 +85,19 @@ export const getAIResponse = async (message: string): Promise<string> => {
     });
 
     if (!chatResponse.ok) {
-      const errorData = await chatResponse.text();
-      console.warn("Backend API error:", errorData);
+      console.warn("Backend API error:", await chatResponse.text());
       return getFallbackResponse(message);
     }
 
     const data = await chatResponse.json();
-    return data.content;
+    
+    // If we got a valid response, return it
+    if (data && data.content) {
+      return data.content;
+    } else {
+      console.warn("Invalid response from backend:", data);
+      return getFallbackResponse(message);
+    }
   } catch (error) {
     console.error("Error fetching AI response:", error);
     return getFallbackResponse(message);
