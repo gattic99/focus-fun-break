@@ -1,12 +1,14 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, X, PlusCircle } from "lucide-react";
+import { Send, Bot, X, PlusCircle, Key } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
-import { getAIResponse, validateApiKey } from "@/utils/openaiUtils";
+import { getAIResponse, validateApiKey, getApiKey, isApiKeyValidated } from "@/utils/openaiUtils";
 import { toast } from "sonner";
 import ChatHistory, { ChatConversation } from "./ChatHistory";
+import ApiKeyDialog from "./ApiKeyDialog";
 import { v4 as uuidv4 } from 'uuid';
 import { isExtensionContext, saveToLocalStorage, getFromLocalStorage, listenForStateChanges } from "@/utils/chromeUtils";
 
@@ -40,6 +42,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
@@ -51,10 +54,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const isAvailable = await validateApiKey();
-        if (!isAvailable) {
-          console.log("AI service unavailable - using fallback responses");
-        }
+        // Silently validate API key on load
+        await validateApiKey();
       } catch (error) {
         console.log("Error checking API status:", error);
       }
@@ -258,6 +259,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const finalMessages = [...updatedMessages, newMessage];
       updateConversationMessages(activeConversationId!, finalMessages);
       
+      // Reset error count if successful
       if (errorCount > 0) {
         setErrorCount(0);
       }
@@ -286,6 +288,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="fixed bottom-24 left-6 z-[10000] animate-scale-in">
+      <ApiKeyDialog
+        open={apiKeyDialogOpen}
+        onOpenChange={setApiKeyDialogOpen}
+      />
+      
       <Card className="glass-panel w-[650px] h-[460px] shadow-xl flex flex-row overflow-hidden">
         <div className="w-[200px] border-r border-gray-200 dark:border-gray-700 bg-white bg-opacity-95">
           <ChatHistory
@@ -303,8 +310,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div className="flex items-center">
               <Bot className="text-focus-purple mr-2" size={20} />
               <h2 className="font-semibold">AI Assistant</h2>
+              
+              {!getApiKey() && (
+                <span className="text-xs text-orange-500 ml-2">(Using simulated responses)</span>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setApiKeyDialogOpen(true)}
+                className="h-8 w-8"
+                aria-label="Configure API Key"
+                title="Configure API Key"
+              >
+                <Key size={18} />
+              </Button>
+              
               <Button
                 variant="ghost"
                 size="icon"
@@ -365,7 +387,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </form>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center space-y-4">
               <Button
                 onClick={createNewConversation}
                 className="bg-focus-purple hover:bg-focus-purple-dark text-white"
@@ -373,6 +395,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <PlusCircle size={16} className="mr-2" />
                 Start New Chat
               </Button>
+              
+              {!getApiKey() && (
+                <div className="max-w-sm text-sm text-muted-foreground">
+                  <p className="mb-2">
+                    You're currently using simulated AI responses. For better results, add your OpenAI API key.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setApiKeyDialogOpen(true)}
+                    className="mt-2"
+                  >
+                    <Key size={14} className="mr-2" />
+                    Add API Key
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
