@@ -36,7 +36,7 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo", // Using a more reliable model
+      model: "gpt-4o-mini", // Using OpenAI's latest model for best performance/cost ratio
       messages: [
         { role: "system", content: "You are a helpful assistant focused on productivity and well-being. Keep your responses concise and practical." },
         { role: "user", content: message }
@@ -45,28 +45,21 @@ app.post('/api/chat', async (req, res) => {
       temperature: 0.7
     });
 
-    // Add a timestamp to help with client-side caching
     return res.json({ 
-      content: response.data.choices[0].message.content,
-      timestamp: new Date().toISOString()
+      content: response.data.choices[0].message.content 
     });
   } catch (error) {
     console.error('Error processing chat request:', error);
     return res.status(500).json({ 
       error: 'Error processing your request',
-      details: error.message,
-      timestamp: new Date().toISOString()
+      details: error.message 
     });
   }
 });
 
-// Health check endpoint with additional information
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok',
-    version: '1.0.1',
-    timestamp: new Date().toISOString()
-  });
+  res.status(200).json({ status: 'ok' });
 });
 
 // Start server

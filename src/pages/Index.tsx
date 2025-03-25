@@ -11,7 +11,6 @@ import FloatingTimer from "@/components/FloatingTimer";
 import PlatformerGame from "@/components/PlatformerGame";
 import ChatBubble from "@/components/Chat/ChatBubble";
 import { saveToLocalStorage, getFromLocalStorage, isExtensionContext } from "@/utils/chromeUtils";
-import { toast } from "sonner";
 
 const Index: React.FC = () => {
   const [settings, setSettings] = useState<TimerSettings>(defaultTimerSettings);
@@ -25,7 +24,6 @@ const Index: React.FC = () => {
         try {
           const storedSettings = await getFromLocalStorage<TimerSettings>('focusflow_settings');
           if (storedSettings) {
-            console.log("Loaded settings from storage:", storedSettings);
             setSettings(storedSettings);
           }
         } catch (error) {
@@ -49,17 +47,6 @@ const Index: React.FC = () => {
     settings
   });
 
-  // Debug log to track timer state changes in Index component
-  useEffect(() => {
-    console.log("Index component - timerState updated:", {
-      mode: timerState.mode,
-      isRunning: timerState.isRunning,
-      timeRemaining: timerState.timeRemaining,
-      breakActivity: timerState.breakActivity,
-      completed: timerState.completed
-    });
-  }, [timerState]);
-
   useEffect(() => {
     if (timerState.mode === 'break' && timerState.completed) {
       openTimerPopup();
@@ -67,7 +54,6 @@ const Index: React.FC = () => {
   }, [timerState.mode, timerState.completed]);
 
   const handleFocusDurationChange = async (newDuration: number) => {
-    console.log("Changing focus duration to:", newDuration);
     const newSettings = {
       ...settings,
       focusDuration: newDuration
@@ -83,7 +69,6 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
-        console.log("Focus duration saved:", newDuration);
       } catch (error) {
         console.error("Error saving focus duration:", error);
       }
@@ -91,7 +76,6 @@ const Index: React.FC = () => {
   };
 
   const handleBreakDurationChange = async (newDuration: number) => {
-    console.log("Setting break duration to:", newDuration);
     const newSettings = {
       ...settings,
       breakDuration: newDuration
@@ -107,11 +91,8 @@ const Index: React.FC = () => {
           action: 'updateSettings',
           settings: newSettings
         });
-        console.log("Break duration saved:", newDuration);
-        toast.success(`Break duration set to ${newDuration} minutes`);
       } catch (error) {
         console.error("Error saving break duration:", error);
-        toast.error("Failed to save break duration");
       }
     }
   };
@@ -126,24 +107,10 @@ const Index: React.FC = () => {
   };
 
   const handleStartTimer = () => {
-    console.log("Starting timer...");
     startTimer();
-    toast.success("Timer started!");
     if (timerState.mode === 'focus') {
       closeTimerPopup();
     }
-  };
-
-  const handlePauseTimer = () => {
-    console.log("Pausing timer...");
-    pauseTimer();
-    toast.info("Timer paused");
-  };
-
-  const handleResetTimer = (mode: 'focus' | 'break') => {
-    console.log(`Resetting ${mode} timer...`);
-    resetTimer(mode);
-    toast.info(`${mode.charAt(0).toUpperCase() + mode.slice(1)} timer reset`);
   };
 
   const handleReturnFromGame = () => {
@@ -200,8 +167,8 @@ const Index: React.FC = () => {
               ? <FocusMode 
                   timerState={timerState} 
                   onStart={handleStartTimer} 
-                  onPause={handlePauseTimer} 
-                  onReset={() => handleResetTimer('focus')} 
+                  onPause={pauseTimer} 
+                  onReset={() => resetTimer('focus')} 
                   focusDuration={settings.focusDuration} 
                   breakDuration={settings.breakDuration} 
                   onChangeFocusDuration={handleFocusDurationChange} 
@@ -210,8 +177,8 @@ const Index: React.FC = () => {
               : <BreakMode 
                   timerState={timerState} 
                   onStart={handleStartTimer} 
-                  onPause={handlePauseTimer} 
-                  onReset={() => handleResetTimer('break')} 
+                  onPause={pauseTimer} 
+                  onReset={() => resetTimer('break')} 
                   onSelectActivity={selectBreakActivity} 
                   breakDuration={settings.breakDuration} 
                   onChangeBreakDuration={handleBreakDurationChange} 

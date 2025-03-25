@@ -1,13 +1,9 @@
 
 import { toast } from "sonner";
 
-// Use a more reliable backend URL that we control
+// Always use the deployed backend API URL
 const getBackendUrl = () => {
-  // For development and testing, use a local server
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000';
-  }
-  // For production, use our deployed backend
+  // Always use the deployed backend regardless of environment
   return 'https://focus-flow-ai-backend.onrender.com';
 };
 
@@ -67,44 +63,32 @@ const fallbackResponses = [
 ];
 
 export const getAIResponse = async (message: string): Promise<string> => {
-  console.log("Trying to get AI response for:", message);
-  
   // First, check if we're offline
   if (!navigator.onLine) {
-    console.log("Offline mode - using fallback response");
     return getFallbackResponse(message);
   }
 
   try {
-    const backendUrl = getBackendUrl();
-    console.log("Using backend URL:", backendUrl);
+    // Call our secure backend instead of OpenAI directly
+    const response = await fetch(`${getBackendUrl()}/api/health`, {
+      // Quick check if API is available before sending actual request
+      method: "GET",
+      signal: AbortSignal.timeout(2000)
+    });
     
-    // Quick health check first
-    try {
-      const healthResponse = await fetch(`${backendUrl}/api/health`, {
-        method: "GET",
-        signal: AbortSignal.timeout(3000)
-      });
-      
-      if (!healthResponse.ok) {
-        console.log("Health check failed, status:", healthResponse.status);
-        return getFallbackResponse(message);
-      }
-      
-      console.log("Health check passed, proceeding with chat request");
-    } catch (error) {
-      console.error("Health check error:", error);
+    if (!response.ok) {
+      // If health check fails, return fallback without showing error
       return getFallbackResponse(message);
     }
     
     // If health check passes, proceed with actual request
-    console.log("Sending chat request to backend");
-    const chatResponse = await fetch(`${backendUrl}/api/chat`, {
+    const chatResponse = await fetch(`${getBackendUrl()}/api/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ message }),
+      // Adding timeout to avoid long waits
       signal: AbortSignal.timeout(10000)
     });
 
@@ -115,7 +99,6 @@ export const getAIResponse = async (message: string): Promise<string> => {
     }
 
     const data = await chatResponse.json();
-    console.log("Received response from API:", data);
     return data.content;
   } catch (error) {
     console.error("Error fetching AI response:", error);
@@ -125,8 +108,6 @@ export const getAIResponse = async (message: string): Promise<string> => {
 
 // Improved function to get a fallback response when the API is unavailable
 function getFallbackResponse(message: string): string {
-  console.log("Using fallback response for:", message);
-  
   // For simple questions, provide standard responses
   if (message.toLowerCase().includes("hello") || message.toLowerCase().includes("hi")) {
     return "Hello! I'm your productivity assistant. How can I help you today?";
