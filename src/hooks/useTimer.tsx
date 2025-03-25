@@ -153,14 +153,14 @@ export const useTimer = ({ settings }: UseTimerProps) => {
     }, 1000);
   }, []);
 
-  // Helper function to handle timer completion
+  // Handle timer completion with proper TypeScript types
   const handleTimerCompletion = (currentMode: TimerMode): TimerState => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
 
-    const nextMode = currentMode === "focus" ? "break" : "focus";
+    const nextMode: TimerMode = currentMode === "focus" ? "break" : "focus";
     const nextDuration = nextMode === "focus" 
       ? minutesToSeconds(settingsRef.current.focusDuration)
       : minutesToSeconds(settingsRef.current.breakDuration);
@@ -174,7 +174,7 @@ export const useTimer = ({ settings }: UseTimerProps) => {
       toast("Break complete! Ready to focus again?");
     }
 
-    const newState = {
+    const newState: TimerState = {
       mode: nextMode,
       timeRemaining: nextDuration,
       isRunning: false,
