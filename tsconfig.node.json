@@ -1,22 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    "target": "ES2022",              // Target modern JavaScript features
+    "lib": ["ES2023"],               // Include newer JavaScript libraries
+    "module": "commonjs",            // Use CommonJS for Node.js compatibility
+    "moduleResolution": "node",      // Standard module resolution for Node.js
+    "esModuleInterop": true,         // Allow default imports from non-ES modules
+    "skipLibCheck": true,            // Skip library checking for faster compilation
+    "allowJs": true,                 // Allow JavaScript files to be included
+    "noEmit": true,                  // Don't output compiled files (since we only want to run them)
+    "strict": true,                  // Enable strict type checking
+    "noUnusedLocals": false,         // Disable unused local variable checks (optional)
+    "noUnusedParameters": false      // Disable unused parameter checks (optional)
   },
-  "include": ["vite.config.ts"]
+  "include": [
+    "src/**/*.ts"                    // Include all TypeScript files in src folder
+  ]
 }
+
