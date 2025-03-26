@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getApiKey, setApiKey, clearApiKey, validateApiKey, fetchApiKeyFromFirebase } from "@/utils/openaiUtils";
 import { toast } from "sonner";
-import { Key, Trash, Info } from "lucide-react";
+import { Key, Trash, Info, Database } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { setOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
 
 interface ApiKeyDialogProps {
   open: boolean;
@@ -17,6 +18,8 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
   const [apiKey, setApiKeyState] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [firebaseKeyAvailable, setFirebaseKeyAvailable] = useState(false);
+  const [firebaseSetupKey, setFirebaseSetupKey] = useState("");
+  const [isFirebaseSetup, setIsFirebaseSetup] = useState(false);
   
   // Check if Firebase key is available when dialog opens
   useEffect(() => {
@@ -69,6 +72,27 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
     }
   };
   
+  const handleSetupFirebaseKey = async () => {
+    if (!firebaseSetupKey.trim()) {
+      toast.error("Please enter an API key for Firebase");
+      return;
+    }
+    
+    setIsFirebaseSetup(true);
+    
+    try {
+      await setOpenAIApiKeyInFirestore(firebaseSetupKey.trim());
+      toast.success("API key successfully stored in Firebase");
+      setFirebaseKeyAvailable(true);
+      setFirebaseSetupKey("");
+    } catch (error) {
+      toast.error("Error storing API key in Firebase");
+      console.error("Error:", error);
+    } finally {
+      setIsFirebaseSetup(false);
+    }
+  };
+  
   const handleRemoveKey = () => {
     clearApiKey();
     setApiKeyState("");
@@ -92,11 +116,18 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
           </DialogDescription>
         </DialogHeader>
         
-        {firebaseKeyAvailable && (
+        {firebaseKeyAvailable ? (
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
               A default API key is already configured for this app. You don't need to add your own key unless you want to use personal settings.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Alert className="bg-amber-50 text-amber-800 border-amber-200">
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              No API key is available in Firebase. App administrators should use the setup form below.
             </AlertDescription>
           </Alert>
         )}
@@ -147,6 +178,35 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
             {isValidating ? "Validating..." : "Save Key"}
           </Button>
         </DialogFooter>
+        
+        {/* Admin Firebase Setup Section */}
+        <div className="pt-4 mt-4 border-t">
+          <h3 className="text-sm font-medium mb-2">Admin Setup (Firebase API Key)</h3>
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              For app administrators only: Store the OpenAI API key in Firebase to provide it to all users.
+            </p>
+            
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                placeholder="Enter OpenAI API key for Firebase"
+                value={firebaseSetupKey}
+                onChange={(e) => setFirebaseSetupKey(e.target.value)}
+              />
+              <Button
+                type="button"
+                disabled={isFirebaseSetup || !firebaseSetupKey.trim()}
+                onClick={handleSetupFirebaseKey}
+                className="gap-2 whitespace-nowrap"
+                variant="outline"
+              >
+                <Database size={16} />
+                {isFirebaseSetup ? "Saving..." : "Store in Firebase"}
+              </Button>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

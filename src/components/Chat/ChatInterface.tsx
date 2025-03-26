@@ -39,6 +39,8 @@ const getChatTitle = (content: string): string => {
   return title;
 };
 
+let cachedApiKey: string | null = null;
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   isOpen, 
   onClose
@@ -65,19 +67,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         setFirebaseKeyLoading(true);
         console.log("Initializing API key...");
         
-        if (getApiKey()) {
-          console.log("Using user-provided API key");
-          setIsUsingFirebaseKey(false);
-          setFirebaseKeyLoading(false);
-          return;
-        }
-        
         console.log("Attempting to fetch API key from Firebase...");
         const firebaseKey = await fetchApiKeyFromFirebase();
         
         if (firebaseKey) {
           console.log("Successfully fetched API key from Firebase");
           setIsUsingFirebaseKey(true);
+          cachedApiKey = firebaseKey;
           
           const keyExists = await checkOpenAIApiKeyInFirestore();
           if (!keyExists) {
@@ -86,6 +82,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         } else {
           console.warn("Failed to fetch API key from Firebase");
           setIsUsingFirebaseKey(false);
+          
+          if (getApiKey()) {
+            console.log("Using user-provided API key");
+          } else {
+            console.log("No API key available, will use fallback responses");
+          }
         }
       } catch (error) {
         console.error("Error initializing API key:", error);
@@ -96,6 +98,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     };
     
     initializeApiKey();
+    
+    const intervalId = setInterval(async () => {
+      if (!isUsingFirebaseKey) {
+        try {
+          const firebaseKey = await fetchApiKeyFromFirebase();
+          if (firebaseKey) {
+            console.log("Periodic check: Found Firebase API key");
+            setIsUsingFirebaseKey(true);
+            cachedApiKey = firebaseKey;
+          }
+        } catch (error) {
+          console.error("Periodic check: Error fetching Firebase key:", error);
+        }
+      }
+    }, 60000);
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -294,7 +313,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
-      if (!getApiKey() && !isUsingFirebaseKey) {
+      if (!isUsingFirebaseKey) {
         const firebaseKey = await fetchApiKeyFromFirebase();
         if (firebaseKey) {
           setIsUsingFirebaseKey(true);

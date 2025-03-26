@@ -12,8 +12,8 @@ import { db } from "./firebaseConfig";
 export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> => {
   try {
     // Store the API key in Firestore
-    await setDoc(doc(db, "secrets", "openai"), {
-      apiKey: apiKey,
+    await setDoc(doc(db, "apiKeys", "lovableAi"), {
+      key: apiKey,
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -31,10 +31,10 @@ export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> 
  */
 export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
   try {
-    const docRef = doc(db, "secrets", "openai");
+    const docRef = doc(db, "apiKeys", "lovableAi");
     const docSnap = await getDoc(docRef);
     
-    if (docSnap.exists() && docSnap.data().apiKey) {
+    if (docSnap.exists() && docSnap.data().key) {
       console.log("API key is stored in Firestore");
       return true;
     } else {
