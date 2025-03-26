@@ -1,5 +1,5 @@
 
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 
 /**
@@ -22,5 +22,27 @@ export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> 
   } catch (error) {
     console.error("Error storing API key in Firestore:", error);
     throw error;
+  }
+};
+
+/**
+ * Utility to check if the API key is already stored in Firestore
+ * This can be used to verify the setup
+ */
+export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
+  try {
+    const docRef = doc(db, "secrets", "openai");
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists() && docSnap.data().apiKey) {
+      console.log("API key is stored in Firestore");
+      return true;
+    } else {
+      console.log("API key is not stored in Firestore");
+      return false;
+    }
+  } catch (error) {
+    console.error("Error checking API key in Firestore:", error);
+    return false;
   }
 };

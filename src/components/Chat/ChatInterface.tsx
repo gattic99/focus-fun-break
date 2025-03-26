@@ -16,6 +16,7 @@ import ChatHistory, { ChatConversation } from "./ChatHistory";
 import ApiKeyDialog from "./ApiKeyDialog";
 import { v4 as uuidv4 } from 'uuid';
 import { isExtensionContext, saveToLocalStorage, getFromLocalStorage, listenForStateChanges } from "@/utils/chromeUtils";
+import { checkOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
 
 interface ChatInterfaceProps {
   isOpen: boolean;
@@ -62,19 +63,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const initializeApiKey = async () => {
       try {
         setFirebaseKeyLoading(true);
+        console.log("Initializing API key...");
+        
         if (getApiKey()) {
+          console.log("Using user-provided API key");
           setIsUsingFirebaseKey(false);
           setFirebaseKeyLoading(false);
           return;
         }
         
+        console.log("Attempting to fetch API key from Firebase...");
         const firebaseKey = await fetchApiKeyFromFirebase();
+        
         if (firebaseKey) {
+          console.log("Successfully fetched API key from Firebase");
           setIsUsingFirebaseKey(true);
-          console.log("Using Firebase API key");
+          
+          const keyExists = await checkOpenAIApiKeyInFirestore();
+          if (!keyExists) {
+            console.warn("API key validation failed but we have a cached key");
+          }
         } else {
+          console.warn("Failed to fetch API key from Firebase");
           setIsUsingFirebaseKey(false);
-          console.log("No Firebase API key available");
         }
       } catch (error) {
         console.error("Error initializing API key:", error);
@@ -284,7 +295,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     try {
       if (!getApiKey() && !isUsingFirebaseKey) {
-        await fetchApiKeyFromFirebase();
+        const firebaseKey = await fetchApiKeyFromFirebase();
+        if (firebaseKey) {
+          setIsUsingFirebaseKey(true);
+          console.log("Using Firebase API key for this request");
+        }
       }
       
       const aiContent = await getAIResponse(userMessage.content);
@@ -308,7 +323,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       
       const errorMessage: ChatMessageProps = {
         role: "assistant",
-        content: "I'm having trouble connecting to my knowledge base right now. Let me answer with what I know.",
+        content: "I'm having trouble connecting. Let me try to answer with what I know.",
         timestamp: new Date(),
       };
       
@@ -352,10 +367,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               {firebaseKeyLoading ? (
                 <span className="text-xs text-slate-500 ml-2">(Checking API status...)</span>
               ) : isUsingFirebaseKey ? (
-                <span className="text-xs text-green-500 ml-2">(Using secured API key)</span>
-              ) : !getApiKey() ? (
+                <span className="text-xs text-green-500 ml-2">(Ready to chat)</span>
+              ) : getApiKey() ? (
+                <span className="text-xs text-green-500 ml-2">(Using custom API key)</span>
+              ) : (
                 <span className="text-xs text-orange-500 ml-2">(Using simulated responses)</span>
-              ) : null}
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Button

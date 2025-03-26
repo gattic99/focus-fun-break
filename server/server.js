@@ -18,16 +18,19 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Check if OpenAI API key is configured
-if (!process.env.OPENAI_API_KEY) {
-  console.warn('⚠️ WARNING: OPENAI_API_KEY is not set in the environment variables. The AI chat will use fallback responses.');
+// Check for API key - try to get it from environment variables first
+let openaiApiKey = process.env.OPENAI_API_KEY;
+
+// If not available in env, we'll try to get it from the request
+if (!openaiApiKey) {
+  console.warn('⚠️ WARNING: OPENAI_API_KEY is not set in the environment variables. The server will try to use the key from the client request or use fallback responses.');
 }
 
-// Configure OpenAI - only if API key is available
+// Configure OpenAI - only if API key is available from environment
 let openai = null;
-if (process.env.OPENAI_API_KEY) {
+if (openaiApiKey) {
   const configuration = new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: openaiApiKey,
   });
   openai = new OpenAIApi(configuration);
 }
@@ -68,16 +71,28 @@ function getFallbackResponse(message) {
 // API Routes
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, apiKey: clientApiKey } = req.body;
     
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // If OpenAI is configured, try to use it
-    if (openai) {
+    // Try to use the provided API key from the client if available
+    const apiKeyToUse = clientApiKey || openaiApiKey;
+
+    // If we have an API key, try to use it
+    if (apiKeyToUse) {
       try {
-        const response = await openai.createChatCompletion({
+        // Create OpenAI instance with the key if not already created
+        let currentOpenai = openai;
+        if (!currentOpenai || clientApiKey) {
+          const configuration = new Configuration({
+            apiKey: apiKeyToUse,
+          });
+          currentOpenai = new OpenAIApi(configuration);
+        }
+
+        const response = await currentOpenai.createChatCompletion({
           model: "gpt-4o-mini", // Using OpenAI's latest model for best performance/cost ratio
           messages: [
             { role: "system", content: "You are a helpful assistant focused on productivity and well-being. Keep your responses concise and practical." },
@@ -99,7 +114,7 @@ app.post('/api/chat', async (req, res) => {
         });
       }
     } else {
-      // If OpenAI is not configured, use fallback responses
+      // If no API key is available, use fallback responses
       return res.json({ 
         content: getFallbackResponse(message),
         usingFallback: true 
@@ -118,12 +133,12 @@ app.post('/api/chat', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
-    aiAvailable: !!openai
+    aiAvailable: !!openaiApiKey
   });
 });
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`API Status: ${openai ? 'Using OpenAI API' : 'Using fallback responses (no API key)'}`);
+  console.log(`API Status: ${openaiApiKey ? 'Using OpenAI API' : 'Using fallback responses (no API key)'}`);
 });
