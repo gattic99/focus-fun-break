@@ -46,3 +46,12 @@ export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
     return false;
   }
 };
+
+// ** Add this section to run once for storing the API key **
+const apiKey = "your-openai-api-key";  // Replace this with your actual OpenAI API key
+
+// Call the function to set the API key in Firestore
+setOpenAIApiKeyInFirestore(apiKey)
+  .then(() => console.log('API key successfully stored in Firestore'))
+  .catch((error) => console.error('Error storing API key:', error));
+
