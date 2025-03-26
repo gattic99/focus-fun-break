@@ -5,12 +5,12 @@ import { getFirestore } from "firebase/firestore";
 // Your Firebase configuration
 // Replace with your actual Firebase project config
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
-  projectId: "YOUR_FIREBASE_PROJECT_ID",
-  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
-  appId: "YOUR_FIREBASE_APP_ID"
+  apiKey: "AIzaSyB2d7nMjgcRo_3FnsullQLmgqMfsDDXNYE",
+  authDomain: "focus-fun-break.firebaseapp.com",
+  projectId: "focus-fun-break",
+  storageBucket: "focus-fun-break.firebasestorage.app",
+  messagingSenderId: "950845909871",
+  appId: "1:950845909871:web:c6e45b1bf88f1c22d8569a"
 };
 
 // Initialize Firebase
