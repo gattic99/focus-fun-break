@@ -1,9 +1,23 @@
-
 import { toast } from "sonner";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "./firebaseConfig";
+import { isExtensionContext, saveToLocalStorage, getFromLocalStorage } from "./chromeUtils";
+
+// Cache the API key to avoid too many Firestore reads
+let cachedApiKey: string | null = null;
+let lastFetchTime = 0;
+const CACHE_EXPIRY = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
 
 // API key handling
 export const getApiKey = (): string | null => {
-  return localStorage.getItem("openai_api_key");
+  // Check if user has provided their own API key
+  const userApiKey = localStorage.getItem("openai_api_key");
+  if (userApiKey) {
+    return userApiKey;
+  }
+  
+  // Otherwise return the cached Firebase key
+  return cachedApiKey;
 };
 
 export const setApiKey = (key: string): void => {
@@ -26,12 +40,43 @@ export const isApiKeyValidated = (): boolean => {
   return localStorage.getItem("openai_api_key_validated") === "true";
 };
 
+// New function to fetch API key from Firebase
+export const fetchApiKeyFromFirebase = async (): Promise<string | null> => {
+  // Don't fetch if we have a recently cached key
+  const now = Date.now();
+  if (cachedApiKey && now - lastFetchTime < CACHE_EXPIRY) {
+    return cachedApiKey;
+  }
+  
+  try {
+    // Fetch the API key from Firestore
+    const apiKeyDoc = await getDoc(doc(db, "secrets", "openai"));
+    
+    if (apiKeyDoc.exists()) {
+      cachedApiKey = apiKeyDoc.data().apiKey;
+      lastFetchTime = now;
+      return cachedApiKey;
+    } else {
+      console.error("No API key found in Firestore");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching API key from Firebase:", error);
+    return null;
+  }
+};
+
 export const validateApiKey = async (): Promise<boolean> => {
   const apiKey = getApiKey();
   
-  // If no API key, we'll use fallback responses
+  // If no API key, we'll try to fetch from Firebase
   if (!apiKey) {
-    return true;
+    const firebaseKey = await fetchApiKeyFromFirebase();
+    if (firebaseKey) {
+      cachedApiKey = firebaseKey;
+      return true;
+    }
+    return false;
   }
   
   try {
@@ -61,9 +106,15 @@ export const validateApiKey = async (): Promise<boolean> => {
 };
 
 export const getAIResponse = async (message: string): Promise<string> => {
-  const apiKey = getApiKey();
+  // First, try to get the user's API key or the cached Firebase key
+  let apiKey = getApiKey();
   
-  // If no API key or network issues, use fallback responses
+  // If no key is available, try to fetch from Firebase
+  if (!apiKey) {
+    apiKey = await fetchApiKeyFromFirebase();
+  }
+  
+  // If still no key or network issues, use fallback responses
   if (!apiKey || !navigator.onLine) {
     return getFallbackResponse(message);
   }
