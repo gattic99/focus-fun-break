@@ -25,6 +25,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
   const gameLoopRef = useRef<number | null>(null);
   
   const {
@@ -45,37 +46,45 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     initialCoins
   });
 
-  // Lazy load audio with reduced volume
+  // Initialize audio
   useEffect(() => {
     const loadAudio = () => {
       try {
         if (!audioRef.current) {
-          audioRef.current = new Audio(getExtensionURL('/assets/office-ambience.mp3'));
+          const audioPath = getExtensionURL('/assets/office-ambience.mp3');
+          console.log("Loading audio from path:", audioPath);
+          
+          audioRef.current = new Audio(audioPath);
           audioRef.current.volume = 0.2;  // Lower volume
           audioRef.current.loop = true;
           
-          audioRef.current.addEventListener('canplay', () => {
+          audioRef.current.addEventListener('canplaythrough', () => {
             console.log("Audio can play now");
             setAudioLoaded(true);
           });
           
           audioRef.current.addEventListener('error', e => {
             console.error("Audio error:", e);
+            const error = audioRef.current?.error;
+            if (error) {
+              console.error("Audio error code:", error.code, "message:", error.message);
+            }
           });
+          
+          // Try to preload the audio
+          audioRef.current.load();
         }
       } catch (error) {
         console.error("Audio initialization error:", error);
       }
     };
     
-    // Delay audio loading
-    const timer = setTimeout(loadAudio, 1000);
+    loadAudio();
     
     return () => {
-      clearTimeout(timer);
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        audioRef.current.src = "";
         audioRef.current = null;
       }
       
@@ -86,6 +95,24 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
       }
     };
   }, []);
+
+  // Play audio when game starts
+  useEffect(() => {
+    if (audioLoaded && gameStarted && !audioPlaying && audioRef.current) {
+      const playAudio = async () => {
+        try {
+          await audioRef.current?.play();
+          setAudioPlaying(true);
+          console.log("Audio started playing");
+        } catch (err) {
+          console.error("Failed to play audio:", err);
+          // We'll handle user interaction to play audio separately
+        }
+      };
+      
+      playAudio();
+    }
+  }, [audioLoaded, gameStarted, audioPlaying]);
 
   // Start game when component mounts
   useEffect(() => {
@@ -166,6 +193,7 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      setAudioPlaying(false);
     }
     
     // Clean up game loop
@@ -178,15 +206,25 @@ const PlatformerGame: React.FC<PlatformerGameProps> = ({
   };
 
   const handleUserInteraction = () => {
-    if (audioRef.current && audioRef.current.paused && audioLoaded) {
-      audioRef.current.play().catch(err => {
-        console.error("Failed to play audio after interaction:", err);
-      });
+    if (audioRef.current && audioLoaded && !audioPlaying) {
+      audioRef.current.play()
+        .then(() => {
+          setAudioPlaying(true);
+          console.log("Audio started playing after user interaction");
+        })
+        .catch(err => {
+          console.error("Failed to play audio after interaction:", err);
+        });
     }
   };
 
   return (
-    <div className="fixed inset-0 top-auto bottom-0 w-full h-screen bg-blue-100 z-[10000] flex flex-col items-center" onClick={handleUserInteraction}>
+    <div 
+      className="fixed inset-0 top-auto bottom-0 w-full h-screen bg-blue-100 z-[10000] flex flex-col items-center" 
+      onClick={handleUserInteraction}
+      onKeyDown={handleUserInteraction}
+      tabIndex={0}
+    >
       <div className="text-center mt-4 mb-2">
         <h2 className="text-xl font-bold text-focus-purple">Office Escape 🏃🏼‍♂️‍➡️🏃🏼‍♀️‍➡️</h2>
         <p className="text-muted-foreground text-sm font-semibold py-[8px] text-center max-w-4xl w-full mx-auto px-4">Dodge obstacles and collect coins—they're your colleagues, Sina and Cristina! Everything except coins and trees will take you out! You can also jump on the shelves—they are not obstacles! The more coins you collect, the higher your score!</p>
