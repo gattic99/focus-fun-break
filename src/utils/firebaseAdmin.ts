@@ -1,16 +1,22 @@
 
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { toast } from "sonner";
 
 /**
  * Admin utility to set the OpenAI API key in Firebase Firestore
  * This should be run only once to set up your key, and not included in the production build
- * 
- * IMPORTANT: After running this once, remove this file or comment out the code to prevent
- * exposing your API key in the source code.
  */
 export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> => {
   try {
+    if (!apiKey || apiKey.trim() === '') {
+      throw new Error("API key cannot be empty");
+    }
+    
+    if (!apiKey.startsWith('sk-')) {
+      throw new Error("API key must start with 'sk-'");
+    }
+    
     // Store the API key in Firestore
     await setDoc(doc(db, "apiKeys", "lovableAi"), {
       key: apiKey,
@@ -46,14 +52,3 @@ export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
     return false;
   }
 };
-
-// Commented out the automatic execution to prevent accidentally exposing API key
-// If you need to set the key, uncomment this section, set your key, run once, then comment out again
-/*
-const apiKey = "your-openai-api-key";  // Replace this with your actual OpenAI API key
-
-// Call the function to set the API key in Firestore
-setOpenAIApiKeyInFirestore(apiKey)
-  .then(() => console.log('API key successfully stored in Firestore'))
-  .catch((error) => console.error('Error storing API key:', error));
-*/

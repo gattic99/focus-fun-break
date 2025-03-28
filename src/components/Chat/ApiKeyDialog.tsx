@@ -3,18 +3,23 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { getApiKey, setApiKey, clearApiKey, validateApiKey, fetchApiKeyFromFirebase } from "@/utils/openaiUtils";
+import { getApiKey, setApiKey, clearApiKey, validateApiKey, fetchApiKeyFromFirestore } from "@/utils/openaiUtils";
 import { toast } from "sonner";
-import { Key, Trash, Info, Database, CheckCircle } from "lucide-react";
+import { Key, Trash, Info, Database, CheckCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { setOpenAIApiKeyInFirestore, checkOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
 
 interface ApiKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onKeyStoredInFirebase?: () => void;
 }
 
-const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
+const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ 
+  open, 
+  onOpenChange,
+  onKeyStoredInFirebase 
+}) => {
   const [apiKey, setApiKeyState] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [firebaseKeyAvailable, setFirebaseKeyAvailable] = useState(false);
@@ -33,17 +38,17 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
           
           if (keyExists) {
             // If it exists, fetch it to confirm we can access it
-            const key = await fetchApiKeyFromFirebase();
+            const key = await fetchApiKeyFromFirestore(true);
             setFirebaseKeyAvailable(!!key);
             
             if (key) {
-              toast.success("API key successfully retrieved from Firebase");
+              console.log("API key successfully retrieved from Firebase");
             } else {
-              toast.error("Firebase key exists but couldn't be retrieved. Check Firebase security rules.");
+              console.error("Firebase key exists but couldn't be retrieved. Check Firebase security rules.");
             }
           } else {
             setFirebaseKeyAvailable(false);
-            toast.info("No API key found in Firebase. Please set one up using the Admin section.");
+            console.log("No API key found in Firebase. Please set one up using the Admin section.");
           }
           
           // Only set the input state if user has their own key
@@ -56,7 +61,6 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
         } catch (error) {
           console.error("Error checking Firebase key:", error);
           setFirebaseKeyAvailable(false);
-          toast.error("Error checking Firebase key. Check console for details.");
         } finally {
           setCheckingStatus(false);
         }
@@ -103,15 +107,32 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
     try {
       await setOpenAIApiKeyInFirestore(firebaseSetupKey.trim());
       
+      // Wait a moment for Firestore to update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // Verify the key was stored successfully
       const keyExists = await checkOpenAIApiKeyInFirestore();
       
       if (keyExists) {
-        toast.success("API key successfully stored in Firebase");
-        setFirebaseKeyAvailable(true);
-        setFirebaseSetupKey("");
+        const key = await fetchApiKeyFromFirestore(true);
+        
+        if (key) {
+          toast.success("API key successfully stored in Firebase");
+          setFirebaseKeyAvailable(true);
+          setFirebaseSetupKey("");
+          
+          // Notify parent component
+          if (onKeyStoredInFirebase) {
+            onKeyStoredInFirebase();
+          }
+          
+          // Close the dialog after success
+          setTimeout(() => onOpenChange(false), 1500);
+        } else {
+          toast.warning("Key stored but couldn't be retrieved. Check Firestore security rules.");
+        }
       } else {
-        toast.error("Failed to store key in Firebase. Check Firebase security rules.");
+        toast.error("Failed to store key in Firebase. Check console for details.");
       }
     } catch (error) {
       console.error("Error storing API key in Firebase:", error);
@@ -147,7 +168,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
         {checkingStatus ? (
           <div className="flex items-center justify-center py-6">
             <div className="flex flex-col items-center space-y-2">
-              <div className="w-8 h-8 rounded-full border-2 border-focus-purple border-t-transparent animate-spin"></div>
+              <Loader2 className="h-8 w-8 animate-spin text-focus-purple" />
               <p className="text-sm text-muted-foreground">Checking API key status...</p>
             </div>
           </div>
@@ -240,7 +261,14 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
                     variant="outline"
                   >
                     <Database size={16} />
-                    {isFirebaseSetup ? "Saving..." : "Store in Firebase"}
+                    {isFirebaseSetup ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Store in Firebase"
+                    )}
                   </Button>
                 </div>
               </div>

@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
@@ -10,12 +11,12 @@ const CACHE_EXPIRY = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 
 // API key handling
 export const getApiKey = (): string | null => {
-  // Check if we have a cached API key first
+  // First try to use cached Firebase key
   if (cachedApiKey) {
     return cachedApiKey;
   }
   
-  // Check if user has provided their own API key
+  // Then check user's own key from localStorage
   const userApiKey = localStorage.getItem("openai_api_key");
   if (userApiKey) {
     return userApiKey;
@@ -46,49 +47,54 @@ export const isApiKeyValidated = (): boolean => {
   return localStorage.getItem("openai_api_key_validated") === "true";
 };
 
-// Fetch API key from Firebase with improved error handling
-export const fetchApiKeyFromFirebase = async (): Promise<string | null> => {
+// Fetch API key from Firebase with improved error handling and retries
+export const fetchApiKeyFromFirestore = async (forceRefresh = false): Promise<string | null> => {
   try {
-    // Don't fetch if we have a recently cached key
     const now = Date.now();
-    if (cachedApiKey && now - lastFetchTime < CACHE_EXPIRY) {
-      console.log("Using cached API key");
+    
+    // Use cached key if available and not expired, unless force refresh is requested
+    if (cachedApiKey && now - lastFetchTime < CACHE_EXPIRY && !forceRefresh) {
+      console.log("Using cached Firebase API key");
       return cachedApiKey;
     }
     
     console.log("Fetching API key from Firestore...");
     
-    // Fetch the API key from Firestore - using the correct path
+    // Get the API key from Firestore
     const apiKeyDoc = await getDoc(doc(db, "apiKeys", "lovableAi"));
     
-    if (apiKeyDoc.exists() && apiKeyDoc.data().key) {
-      cachedApiKey = apiKeyDoc.data().key;
-      lastFetchTime = now;
-      console.log("API key successfully fetched from Firestore");
-      return cachedApiKey;
-    } else {
-      console.log("No API key found in Firestore");
-      return null;
+    if (apiKeyDoc.exists()) {
+      const data = apiKeyDoc.data();
+      if (data && data.key) {
+        cachedApiKey = data.key;
+        lastFetchTime = now;
+        console.log("API key successfully fetched from Firestore");
+        return cachedApiKey;
+      }
     }
+    
+    console.log("No API key found in Firestore or key field is missing");
+    return null;
   } catch (error) {
-    console.error("Error fetching API key from Firebase:", error);
-    toast.error("Unable to fetch API key from Firebase.");
+    console.error("Error fetching API key from Firestore:", error);
+    // Don't show toast here as it can be annoying during retries
     return null;
   }
 };
 
-// Modified validate function to handle Firebase key
+// Modified validate function that checks Firebase key first
 export const validateApiKey = async (): Promise<boolean> => {
   try {
-    // First try to get Firebase key (prioritize over user's key)
-    const firebaseKey = await fetchApiKeyFromFirebase();
+    // First try to get Firebase key
+    const firebaseKey = await fetchApiKeyFromFirestore();
+    
     if (firebaseKey) {
       cachedApiKey = firebaseKey;
       console.log("Using Firebase API key for validation");
       return true; // Skip validation for Firebase key to reduce API calls
     }
     
-    // If no Firebase key, try user's API key
+    // Fall back to user's API key if no Firebase key
     const userApiKey = getApiKey();
     if (!userApiKey) {
       return false;
@@ -121,8 +127,8 @@ export const validateApiKey = async (): Promise<boolean> => {
 };
 
 export const getAIResponse = async (message: string): Promise<string> => {
-  // First priority: Use Firebase key
-  const firebaseKey = await fetchApiKeyFromFirebase();
+  // Always try to get a fresh Firebase key first
+  const firebaseKey = await fetchApiKeyFromFirestore(true);
   
   if (firebaseKey) {
     try {
@@ -182,7 +188,7 @@ export const getAIResponse = async (message: string): Promise<string> => {
     return useUserApiKey(message, userApiKey);
   }
   
-  // Last resort: Try server fallback or use canned responses
+  // Third priority: Try server API
   try {
     console.log("No API key available, using server fallback");
     const response = await fetch("/api/chat", {

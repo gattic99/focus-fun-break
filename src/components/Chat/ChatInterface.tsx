@@ -9,7 +9,7 @@ import {
   validateApiKey, 
   getApiKey, 
   isApiKeyValidated,
-  fetchApiKeyFromFirebase 
+  fetchApiKeyFromFirestore 
 } from "@/utils/openaiUtils";
 import { toast } from "sonner";
 import ChatHistory, { ChatConversation } from "./ChatHistory";
@@ -53,6 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [firebaseKeyAvailable, setFirebaseKeyAvailable] = useState(false);
   const [firebaseKeyLoading, setFirebaseKeyLoading] = useState(true);
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [keyCheckAttempts, setKeyCheckAttempts] = useState(0);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
@@ -62,60 +63,59 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const initializeApiKey = async () => {
+    const checkFirebaseApiKey = async () => {
       try {
         setFirebaseKeyLoading(true);
         setApiKeyError(null);
         
-        console.log("Checking for API key in Firebase...");
-        const keyExists = await checkOpenAIApiKeyInFirestore();
+        const key = await fetchApiKeyFromFirestore(true);
         
-        if (keyExists) {
-          const key = await fetchApiKeyFromFirebase();
+        if (key) {
+          console.log("Successfully retrieved API key from Firebase");
+          setFirebaseKeyAvailable(true);
+          setIsUsingFirebaseKey(true);
+          setApiKeyError(null);
+          setKeyCheckAttempts(0);
+        } else {
+          const keyExists = await checkOpenAIApiKeyInFirestore();
           
-          if (key) {
-            console.log("Successfully retrieved API key from Firebase");
-            setFirebaseKeyAvailable(true);
-          } else {
-            setFirebaseKeyAvailable(false);
+          if (keyExists) {
             setApiKeyError("Firebase key exists but couldn't be retrieved. Check Firebase security rules.");
             console.error("Firebase key exists but couldn't be retrieved");
+            setKeyCheckAttempts(prev => prev + 1);
+          } else {
+            setApiKeyError("No API key found in Firebase");
+            console.log("No API key found in Firebase");
           }
-        } else {
+          
           setFirebaseKeyAvailable(false);
-          setApiKeyError("No API key found in Firebase");
-          console.log("No API key found in Firebase");
+          setIsUsingFirebaseKey(false);
         }
       } catch (error) {
-        console.error("Error initializing API key:", error);
+        console.error("Error checking Firebase API key:", error);
         setFirebaseKeyAvailable(false);
+        setIsUsingFirebaseKey(false);
         setApiKeyError("Error checking Firebase API key");
+        setKeyCheckAttempts(prev => prev + 1);
       } finally {
         setFirebaseKeyLoading(false);
       }
     };
+
+    checkFirebaseApiKey();
     
-    initializeApiKey();
-    
-    const intervalId = setInterval(async () => {
-      try {
-        const keyExists = await checkOpenAIApiKeyInFirestore();
-        
-        if (keyExists && !firebaseKeyAvailable) {
-          const key = await fetchApiKeyFromFirebase();
-          if (key) {
-            console.log("Periodic check: Found Firebase API key");
-            setFirebaseKeyAvailable(true);
-            setApiKeyError(null);
-          }
+    const intervalId = setInterval(() => {
+      if (keyCheckAttempts < 5) {
+        checkFirebaseApiKey();
+      } else {
+        if (Math.random() < 0.3) {
+          checkFirebaseApiKey();
         }
-      } catch (error) {
-        console.error("Periodic key check error:", error);
       }
-    }, 60000);
+    }, 30000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [keyCheckAttempts]);
 
   useEffect(() => {
     const checkApiStatus = async () => {
@@ -314,9 +314,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     try {
       if (!firebaseKeyAvailable) {
-        const key = await fetchApiKeyFromFirebase();
+        const key = await fetchApiKeyFromFirestore(true);
         if (key) {
           setFirebaseKeyAvailable(true);
+          setIsUsingFirebaseKey(true);
           console.log("Found Firebase API key just before making request");
         }
       }
@@ -363,6 +364,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <ApiKeyDialog
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}
+        onKeyStoredInFirebase={() => {
+          setFirebaseKeyLoading(true);
+          fetchApiKeyFromFirestore(true).then(key => {
+            if (key) {
+              setFirebaseKeyAvailable(true);
+              setIsUsingFirebaseKey(true);
+              setApiKeyError(null);
+              toast.success("Now using Firebase API key");
+            }
+            setFirebaseKeyLoading(false);
+          });
+        }}
       />
       
       <Card className="glass-panel w-[650px] h-[460px] shadow-xl flex flex-row overflow-hidden">
