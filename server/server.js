@@ -29,10 +29,15 @@ if (!openaiApiKey) {
 // Configure OpenAI - only if API key is available from environment
 let openai = null;
 if (openaiApiKey) {
-  const configuration = new Configuration({
-    apiKey: openaiApiKey,
-  });
-  openai = new OpenAIApi(configuration);
+  try {
+    const configuration = new Configuration({
+      apiKey: openaiApiKey,
+    });
+    openai = new OpenAIApi(configuration);
+    console.log('✅ OpenAI configured with API key from environment');
+  } catch (error) {
+    console.error('❌ Error configuring OpenAI:', error);
+  }
 }
 
 // Enhanced fallback responses for when the API is unavailable
@@ -83,7 +88,7 @@ app.post('/api/chat', async (req, res) => {
     // If we have an API key, try to use it
     if (apiKeyToUse) {
       try {
-        // Create OpenAI instance with the key if not already created
+        // Create OpenAI instance with the key if not already created or using client key
         let currentOpenai = openai;
         if (!currentOpenai || clientApiKey) {
           const configuration = new Configuration({

@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getApiKey, setApiKey, clearApiKey, validateApiKey, fetchApiKeyFromFirebase } from "@/utils/openaiUtils";
 import { toast } from "sonner";
-import { Key, Trash, Info, Database } from "lucide-react";
+import { Key, Trash, Info, Database, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { setOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
+import { setOpenAIApiKeyInFirestore, checkOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
 
 interface ApiKeyDialogProps {
   open: boolean;
@@ -20,14 +20,31 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
   const [firebaseKeyAvailable, setFirebaseKeyAvailable] = useState(false);
   const [firebaseSetupKey, setFirebaseSetupKey] = useState("");
   const [isFirebaseSetup, setIsFirebaseSetup] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   
   // Check if Firebase key is available when dialog opens
   useEffect(() => {
     if (open) {
       const checkFirebaseKey = async () => {
+        setCheckingStatus(true);
         try {
-          const key = await fetchApiKeyFromFirebase();
-          setFirebaseKeyAvailable(!!key);
+          // First check if a key exists in Firestore
+          const keyExists = await checkOpenAIApiKeyInFirestore();
+          
+          if (keyExists) {
+            // If it exists, fetch it to confirm we can access it
+            const key = await fetchApiKeyFromFirebase();
+            setFirebaseKeyAvailable(!!key);
+            
+            if (key) {
+              toast.success("API key successfully retrieved from Firebase");
+            } else {
+              toast.error("Firebase key exists but couldn't be retrieved. Check Firebase security rules.");
+            }
+          } else {
+            setFirebaseKeyAvailable(false);
+            toast.info("No API key found in Firebase. Please set one up using the Admin section.");
+          }
           
           // Only set the input state if user has their own key
           const userKey = getApiKey();
@@ -39,6 +56,9 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
         } catch (error) {
           console.error("Error checking Firebase key:", error);
           setFirebaseKeyAvailable(false);
+          toast.error("Error checking Firebase key. Check console for details.");
+        } finally {
+          setCheckingStatus(false);
         }
       };
       
@@ -82,12 +102,20 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
     
     try {
       await setOpenAIApiKeyInFirestore(firebaseSetupKey.trim());
-      toast.success("API key successfully stored in Firebase");
-      setFirebaseKeyAvailable(true);
-      setFirebaseSetupKey("");
+      
+      // Verify the key was stored successfully
+      const keyExists = await checkOpenAIApiKeyInFirestore();
+      
+      if (keyExists) {
+        toast.success("API key successfully stored in Firebase");
+        setFirebaseKeyAvailable(true);
+        setFirebaseSetupKey("");
+      } else {
+        toast.error("Failed to store key in Firebase. Check Firebase security rules.");
+      }
     } catch (error) {
-      toast.error("Error storing API key in Firebase");
-      console.error("Error:", error);
+      console.error("Error storing API key in Firebase:", error);
+      toast.error("Error storing API key in Firebase. Check console for details.");
     } finally {
       setIsFirebaseSetup(false);
     }
@@ -116,97 +144,109 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ open, onOpenChange }) => {
           </DialogDescription>
         </DialogHeader>
         
-        {firebaseKeyAvailable ? (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              A default API key is already configured for this app. You don't need to add your own key unless you want to use personal settings.
-            </AlertDescription>
-          </Alert>
-        ) : (
-          <Alert className="bg-amber-50 text-amber-800 border-amber-200">
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              No API key is available in Firebase. App administrators should use the setup form below.
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Input
-              id="apiKey"
-              type="password"
-              placeholder="sk-..."
-              value={apiKey}
-              onChange={(e) => setApiKeyState(e.target.value)}
-              className="col-span-3"
-            />
-            <p className="text-xs text-muted-foreground">
-              Get your key at{" "}
-              <a 
-                href="https://platform.openai.com/account/api-keys" 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-focus-purple hover:underline"
-              >
-                platform.openai.com
-              </a>
-            </p>
-          </div>
-        </div>
-        
-        <DialogFooter className="flex justify-between items-center sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isValidating || (!getApiKey() && !localStorage.getItem("openai_api_key"))}
-            onClick={handleRemoveKey}
-            className="gap-2"
-          >
-            <Trash size={16} />
-            Remove Key
-          </Button>
-          
-          <Button 
-            type="submit" 
-            disabled={isValidating || !apiKey.trim()}
-            onClick={handleSaveKey}
-            className="gap-2 bg-focus-purple hover:bg-focus-purple-dark"
-          >
-            <Key size={16} />
-            {isValidating ? "Validating..." : "Save Key"}
-          </Button>
-        </DialogFooter>
-        
-        {/* Admin Firebase Setup Section */}
-        <div className="pt-4 mt-4 border-t">
-          <h3 className="text-sm font-medium mb-2">Admin Setup (Firebase API Key)</h3>
-          <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">
-              For app administrators only: Store the OpenAI API key in Firebase to provide it to all users.
-            </p>
-            
-            <div className="flex gap-2">
-              <Input
-                type="password"
-                placeholder="Enter OpenAI API key for Firebase"
-                value={firebaseSetupKey}
-                onChange={(e) => setFirebaseSetupKey(e.target.value)}
-              />
-              <Button
-                type="button"
-                disabled={isFirebaseSetup || !firebaseSetupKey.trim()}
-                onClick={handleSetupFirebaseKey}
-                className="gap-2 whitespace-nowrap"
-                variant="outline"
-              >
-                <Database size={16} />
-                {isFirebaseSetup ? "Saving..." : "Store in Firebase"}
-              </Button>
+        {checkingStatus ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="flex flex-col items-center space-y-2">
+              <div className="w-8 h-8 rounded-full border-2 border-focus-purple border-t-transparent animate-spin"></div>
+              <p className="text-sm text-muted-foreground">Checking API key status...</p>
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {firebaseKeyAvailable ? (
+              <Alert className="bg-green-50 text-green-800 border-green-200">
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  A default API key is configured for this app. You don't need to add your own key.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert className="bg-amber-50 text-amber-800 border-amber-200">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  No API key is available in Firebase. App administrators should use the setup form below.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <label htmlFor="apiKey" className="text-sm font-medium">Your Personal OpenAI API Key (Optional)</label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  placeholder="sk-..."
+                  value={apiKey}
+                  onChange={(e) => setApiKeyState(e.target.value)}
+                  className="col-span-3"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Get your key at{" "}
+                  <a 
+                    href="https://platform.openai.com/account/api-keys" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="text-focus-purple hover:underline"
+                  >
+                    platform.openai.com
+                  </a>
+                </p>
+              </div>
+            </div>
+            
+            <DialogFooter className="flex justify-between items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isValidating || (!getApiKey() && !localStorage.getItem("openai_api_key"))}
+                onClick={handleRemoveKey}
+                className="gap-2"
+              >
+                <Trash size={16} />
+                Remove Key
+              </Button>
+              
+              <Button 
+                type="submit" 
+                disabled={isValidating || !apiKey.trim()}
+                onClick={handleSaveKey}
+                className="gap-2 bg-focus-purple hover:bg-focus-purple-dark"
+              >
+                <Key size={16} />
+                {isValidating ? "Validating..." : "Save Key"}
+              </Button>
+            </DialogFooter>
+            
+            {/* Admin Firebase Setup Section */}
+            <div className="pt-4 mt-4 border-t">
+              <h3 className="text-sm font-medium mb-2">Admin Setup (Firebase API Key)</h3>
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">
+                  For app administrators only: Store the OpenAI API key in Firebase to provide it to all users.
+                </p>
+                
+                <div className="flex gap-2">
+                  <Input
+                    type="password"
+                    placeholder="Enter OpenAI API key for Firebase"
+                    value={firebaseSetupKey}
+                    onChange={(e) => setFirebaseSetupKey(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    disabled={isFirebaseSetup || !firebaseSetupKey.trim()}
+                    onClick={handleSetupFirebaseKey}
+                    className="gap-2 whitespace-nowrap"
+                    variant="outline"
+                  >
+                    <Database size={16} />
+                    {isFirebaseSetup ? "Saving..." : "Store in Firebase"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

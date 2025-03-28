@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Bot, X, PlusCircle, Key } from "lucide-react";
+import { Send, Bot, X, PlusCircle, Key, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import ChatMessage, { ChatMessageProps } from "./ChatMessage";
 import { 
@@ -39,8 +39,6 @@ const getChatTitle = (content: string): string => {
   return title;
 };
 
-let cachedApiKey: string | null = null;
-
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   isOpen, 
   onClose
@@ -52,11 +50,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [errorCount, setErrorCount] = useState(0);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [isUsingFirebaseKey, setIsUsingFirebaseKey] = useState(false);
+  const [firebaseKeyAvailable, setFirebaseKeyAvailable] = useState(false);
   const [firebaseKeyLoading, setFirebaseKeyLoading] = useState(true);
-  
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages || [];
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -65,33 +65,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const initializeApiKey = async () => {
       try {
         setFirebaseKeyLoading(true);
-        console.log("Initializing API key...");
+        setApiKeyError(null);
         
-        console.log("Attempting to fetch API key from Firebase...");
-        const firebaseKey = await fetchApiKeyFromFirebase();
+        console.log("Checking for API key in Firebase...");
+        const keyExists = await checkOpenAIApiKeyInFirestore();
         
-        if (firebaseKey) {
-          console.log("Successfully fetched API key from Firebase");
-          setIsUsingFirebaseKey(true);
-          cachedApiKey = firebaseKey;
+        if (keyExists) {
+          const key = await fetchApiKeyFromFirebase();
           
-          const keyExists = await checkOpenAIApiKeyInFirestore();
-          if (!keyExists) {
-            console.warn("API key validation failed but we have a cached key");
+          if (key) {
+            console.log("Successfully retrieved API key from Firebase");
+            setFirebaseKeyAvailable(true);
+          } else {
+            setFirebaseKeyAvailable(false);
+            setApiKeyError("Firebase key exists but couldn't be retrieved. Check Firebase security rules.");
+            console.error("Firebase key exists but couldn't be retrieved");
           }
         } else {
-          console.warn("Failed to fetch API key from Firebase");
-          setIsUsingFirebaseKey(false);
-          
-          if (getApiKey()) {
-            console.log("Using user-provided API key");
-          } else {
-            console.log("No API key available, will use fallback responses");
-          }
+          setFirebaseKeyAvailable(false);
+          setApiKeyError("No API key found in Firebase");
+          console.log("No API key found in Firebase");
         }
       } catch (error) {
         console.error("Error initializing API key:", error);
-        setIsUsingFirebaseKey(false);
+        setFirebaseKeyAvailable(false);
+        setApiKeyError("Error checking Firebase API key");
       } finally {
         setFirebaseKeyLoading(false);
       }
@@ -100,17 +98,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     initializeApiKey();
     
     const intervalId = setInterval(async () => {
-      if (!isUsingFirebaseKey) {
-        try {
-          const firebaseKey = await fetchApiKeyFromFirebase();
-          if (firebaseKey) {
+      try {
+        const keyExists = await checkOpenAIApiKeyInFirestore();
+        
+        if (keyExists && !firebaseKeyAvailable) {
+          const key = await fetchApiKeyFromFirebase();
+          if (key) {
             console.log("Periodic check: Found Firebase API key");
-            setIsUsingFirebaseKey(true);
-            cachedApiKey = firebaseKey;
+            setFirebaseKeyAvailable(true);
+            setApiKeyError(null);
           }
-        } catch (error) {
-          console.error("Periodic check: Error fetching Firebase key:", error);
         }
+      } catch (error) {
+        console.error("Periodic key check error:", error);
       }
     }, 60000);
     
@@ -313,11 +313,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
-      if (!isUsingFirebaseKey) {
-        const firebaseKey = await fetchApiKeyFromFirebase();
-        if (firebaseKey) {
-          setIsUsingFirebaseKey(true);
-          console.log("Using Firebase API key for this request");
+      if (!firebaseKeyAvailable) {
+        const key = await fetchApiKeyFromFirebase();
+        if (key) {
+          setFirebaseKeyAvailable(true);
+          console.log("Found Firebase API key just before making request");
         }
       }
       
@@ -349,7 +349,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       updateConversationMessages(activeConversationId!, [...updatedMessages, errorMessage]);
       
       if (errorCount >= 2) {
-        toast.info("Using offline AI responses for now.");
+        toast.error("API connection error. Please check API key or try again later.");
       }
     } finally {
       setIsLoading(false);
@@ -384,13 +384,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <h2 className="font-semibold">AI Assistant</h2>
               
               {firebaseKeyLoading ? (
-                <span className="text-xs text-slate-500 ml-2">(Checking API status...)</span>
-              ) : isUsingFirebaseKey ? (
-                <span className="text-xs text-green-500 ml-2">(Ready to chat)</span>
+                <div className="flex items-center ml-2">
+                  <div className="w-3 h-3 rounded-full border-2 border-focus-purple border-t-transparent animate-spin mr-1"></div>
+                  <span className="text-xs text-slate-500">Checking API...</span>
+                </div>
+              ) : firebaseKeyAvailable ? (
+                <span className="text-xs text-green-500 ml-2 flex items-center">
+                  <Check size={12} className="mr-1" />
+                  Ready to chat
+                </span>
               ) : getApiKey() ? (
-                <span className="text-xs text-green-500 ml-2">(Using custom API key)</span>
+                <span className="text-xs text-green-500 ml-2">Using custom API key</span>
               ) : (
-                <span className="text-xs text-orange-500 ml-2">(Using simulated responses)</span>
+                <span className="text-xs text-orange-500 ml-2">Using simulated responses</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -475,10 +481,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 Start New Chat
               </Button>
               
-              {!getApiKey() && !isUsingFirebaseKey && !firebaseKeyLoading && (
+              {apiKeyError && !firebaseKeyAvailable && !getApiKey() && (
                 <div className="max-w-sm text-sm text-muted-foreground">
-                  <p className="mb-2">
-                    You're currently using simulated AI responses. For better results, add your OpenAI API key.
+                  <p className="mb-2 text-orange-500">
+                    {apiKeyError}. Using simulated AI responses for now.
                   </p>
                   <Button 
                     variant="outline" 
@@ -487,14 +493,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     className="mt-2"
                   >
                     <Key size={14} className="mr-2" />
-                    Add API Key
+                    Configure API Key
                   </Button>
                 </div>
               )}
               
               {firebaseKeyLoading && (
                 <div className="flex items-center justify-center space-x-2">
-                  <div className="w-4 h-4 rounded-full bg-focus-purple/50 animate-pulse"></div>
+                  <div className="w-4 h-4 rounded-full border-2 border-focus-purple border-t-transparent animate-spin"></div>
                   <div className="text-sm text-muted-foreground">Loading AI capabilities...</div>
                 </div>
               )}

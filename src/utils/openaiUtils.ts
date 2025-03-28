@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
@@ -7,7 +6,7 @@ import { isExtensionContext, saveToLocalStorage, getFromLocalStorage } from "./c
 // Cache the API key to avoid too many Firestore reads
 let cachedApiKey: string | null = null;
 let lastFetchTime = 0;
-const CACHE_EXPIRY = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+const CACHE_EXPIRY = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
 
 // API key handling
 export const getApiKey = (): string | null => {
@@ -59,7 +58,7 @@ export const fetchApiKeyFromFirebase = async (): Promise<string | null> => {
     
     console.log("Fetching API key from Firestore...");
     
-    // Fetch the API key from Firestore - using the correct path now
+    // Fetch the API key from Firestore - using the correct path
     const apiKeyDoc = await getDoc(doc(db, "apiKeys", "lovableAi"));
     
     if (apiKeyDoc.exists() && apiKeyDoc.data().key) {
@@ -68,11 +67,12 @@ export const fetchApiKeyFromFirebase = async (): Promise<string | null> => {
       console.log("API key successfully fetched from Firestore");
       return cachedApiKey;
     } else {
-      console.error("No API key found in Firestore");
+      console.log("No API key found in Firestore");
       return null;
     }
   } catch (error) {
     console.error("Error fetching API key from Firebase:", error);
+    toast.error("Unable to fetch API key from Firebase.");
     return null;
   }
 };
@@ -80,44 +80,39 @@ export const fetchApiKeyFromFirebase = async (): Promise<string | null> => {
 // Modified validate function to handle Firebase key
 export const validateApiKey = async (): Promise<boolean> => {
   try {
-    // First try to get user's API key
-    let apiKey = getApiKey();
+    // First try to get Firebase key (prioritize over user's key)
+    const firebaseKey = await fetchApiKeyFromFirebase();
+    if (firebaseKey) {
+      cachedApiKey = firebaseKey;
+      console.log("Using Firebase API key for validation");
+      return true; // Skip validation for Firebase key to reduce API calls
+    }
     
-    // If no key, try to fetch from Firebase
-    if (!apiKey) {
-      apiKey = await fetchApiKeyFromFirebase();
-      // If we got a key from Firebase, use it
-      if (apiKey) {
-        console.log("Using API key from Firebase");
-        cachedApiKey = apiKey;
-        return true; // Skip validation for Firebase key to reduce API calls
-      }
+    // If no Firebase key, try user's API key
+    const userApiKey = getApiKey();
+    if (!userApiKey) {
       return false;
     }
     
     // Only validate user-provided keys
-    if (localStorage.getItem("openai_api_key")) {
-      const response = await fetch("https://api.openai.com/v1/models", {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        signal: AbortSignal.timeout(5000) // 5-second timeout
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API validation failed:", errorText);
-        setApiKeyValidated(false);
-        return false;
-      }
-      
-      setApiKeyValidated(true);
-      return true;
+    const response = await fetch("https://api.openai.com/v1/models", {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${userApiKey}`,
+        "Content-Type": "application/json"
+      },
+      signal: AbortSignal.timeout(5000) // 5-second timeout
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API validation failed:", errorText);
+      setApiKeyValidated(false);
+      return false;
     }
     
-    return true; // Skip validation for Firebase key
+    setApiKeyValidated(true);
+    return true;
   } catch (error) {
     console.error("Error validating API key:", error);
     setApiKeyValidated(false);
@@ -126,16 +121,12 @@ export const validateApiKey = async (): Promise<boolean> => {
 };
 
 export const getAIResponse = async (message: string): Promise<string> => {
-  // Always try to fetch from Firebase first, regardless of cached state
-  console.log("Attempting to fetch API key from Firebase...");
+  // First priority: Use Firebase key
   const firebaseKey = await fetchApiKeyFromFirebase();
   
-  // If Firebase key exists, use it
   if (firebaseKey) {
-    console.log("Using Firebase API key for this request");
-    
     try {
-      console.log("Sending request to OpenAI API with Firebase key...");
+      console.log("Using Firebase API key for request");
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -143,7 +134,7 @@ export const getAIResponse = async (message: string): Promise<string> => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini", // Smaller, more efficient model
+          model: "gpt-4o-mini",
           messages: [
             { 
               role: "system", 
@@ -185,15 +176,34 @@ export const getAIResponse = async (message: string): Promise<string> => {
     }
   }
   
-  // If no Firebase key, try user provided key
+  // Second priority: User provided key
   const userApiKey = getApiKey();
   if (userApiKey) {
     return useUserApiKey(message, userApiKey);
   }
   
-  // If all else fails, use fallback response
-  console.log("No API key available, using fallback response");
-  return getFallbackResponse(message);
+  // Last resort: Try server fallback or use canned responses
+  try {
+    console.log("No API key available, using server fallback");
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message }),
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!response.ok) {
+      return getFallbackResponse(message);
+    }
+    
+    const data = await response.json();
+    return data.content;
+  } catch (error) {
+    console.error("Server fallback failed:", error);
+    return getFallbackResponse(message);
+  }
 };
 
 // Helper function to use user-provided API key
