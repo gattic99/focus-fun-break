@@ -3,15 +3,16 @@ import { toast } from "sonner";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
 import { isExtensionContext, saveToLocalStorage, getFromLocalStorage } from "./chromeUtils";
+import { getOpenAIApiKeyFromFirestore } from "./firebaseAdmin";
 
 // Cache the API key to avoid too many Firestore reads
 let cachedApiKey: string | null = null;
 let lastFetchTime = 0;
-const CACHE_EXPIRY = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
+const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 // API key handling
 export const getApiKey = (): string | null => {
-  // First try to use cached Firebase key
+  // First try to use cached API key
   if (cachedApiKey) {
     return cachedApiKey;
   }
@@ -60,24 +61,20 @@ export const fetchApiKeyFromFirestore = async (forceRefresh = false): Promise<st
     
     console.log("Fetching API key from Firestore...");
     
-    // Get the API key from Firestore
-    const apiKeyDoc = await getDoc(doc(db, "apiKeys", "lovableAi"));
+    // Get the API key directly from our dedicated function
+    const apiKey = await getOpenAIApiKeyFromFirestore();
     
-    if (apiKeyDoc.exists()) {
-      const data = apiKeyDoc.data();
-      if (data && data.key) {
-        cachedApiKey = data.key;
-        lastFetchTime = now;
-        console.log("API key successfully fetched from Firestore");
-        return cachedApiKey;
-      }
+    if (apiKey) {
+      cachedApiKey = apiKey;
+      lastFetchTime = now;
+      console.log("API key successfully fetched from Firestore");
+      return cachedApiKey;
     }
     
-    console.log("No API key found in Firestore or key field is missing");
+    console.log("No API key found in Firestore");
     return null;
   } catch (error) {
     console.error("Error fetching API key from Firestore:", error);
-    // Don't show toast here as it can be annoying during retries
     return null;
   }
 };
@@ -86,7 +83,7 @@ export const fetchApiKeyFromFirestore = async (forceRefresh = false): Promise<st
 export const validateApiKey = async (): Promise<boolean> => {
   try {
     // First try to get Firebase key
-    const firebaseKey = await fetchApiKeyFromFirestore();
+    const firebaseKey = await fetchApiKeyFromFirestore(true);
     
     if (firebaseKey) {
       cachedApiKey = firebaseKey;
@@ -132,7 +129,7 @@ export const getAIResponse = async (message: string): Promise<string> => {
   
   if (firebaseKey) {
     try {
-      console.log("Using Firebase API key for request");
+      console.log("Using Firebase API key for OpenAI request");
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -151,20 +148,13 @@ export const getAIResponse = async (message: string): Promise<string> => {
           max_tokens: 500,
           temperature: 0.7
         }),
-        signal: AbortSignal.timeout(10000) // 10-second timeout
+        signal: AbortSignal.timeout(15000) // 15-second timeout
       });
       
       if (!response.ok) {
         const errorText = await response.text();
         console.error("OpenAI API error with Firebase key:", errorText);
-        
-        // Fall back to user API key if Firebase key fails
-        const userApiKey = getApiKey();
-        if (userApiKey) {
-          return useUserApiKey(message, userApiKey);
-        }
-        
-        return getFallbackResponse(message);
+        throw new Error(`OpenAI API error: ${errorText}`);
       }
       
       const data = await response.json();

@@ -25,8 +25,11 @@ export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> 
     });
     
     console.log("API key successfully stored in Firestore");
+    toast.success("API key successfully stored in Firestore");
+    return Promise.resolve();
   } catch (error) {
     console.error("Error storing API key in Firestore:", error);
+    toast.error("Error storing API key: " + (error instanceof Error ? error.message : String(error)));
     throw error;
   }
 };
@@ -50,5 +53,27 @@ export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
   } catch (error) {
     console.error("Error checking API key in Firestore:", error);
     return false;
+  }
+};
+
+/**
+ * Utility to get the OpenAI API key from Firestore
+ * This is the primary function to retrieve the API key
+ */
+export const getOpenAIApiKeyFromFirestore = async (): Promise<string | null> => {
+  try {
+    const docRef = doc(db, "apiKeys", "lovableAi");
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists() && docSnap.data().key) {
+      console.log("Successfully retrieved API key from Firestore");
+      return docSnap.data().key;
+    } else {
+      console.log("No API key found in Firestore");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error retrieving API key from Firestore:", error);
+    return null;
   }
 };
