@@ -9,6 +9,7 @@ import { getOpenAIApiKeyFromFirestore } from "./firebaseAdmin";
 let cachedApiKey: string | null = null;
 let lastFetchTime = 0;
 const CACHE_EXPIRY = 30 * 60 * 1000; // 30 minutes in milliseconds
+const MAX_RETRIES = 3;
 
 // API key handling
 export const getApiKey = (): string | null => {
@@ -49,7 +50,7 @@ export const isApiKeyValidated = (): boolean => {
 };
 
 // Fetch API key from Firebase with improved error handling and retries
-export const fetchApiKeyFromFirestore = async (forceRefresh = false): Promise<string | null> => {
+export const fetchApiKeyFromFirestore = async (forceRefresh = false, retries = 0): Promise<string | null> => {
   try {
     const now = Date.now();
     
@@ -75,6 +76,16 @@ export const fetchApiKeyFromFirestore = async (forceRefresh = false): Promise<st
     return null;
   } catch (error) {
     console.error("Error fetching API key from Firestore:", error);
+    
+    // Implement retry logic for transient errors
+    if (retries < MAX_RETRIES) {
+      console.log(`Retrying API key fetch (attempt ${retries + 1} of ${MAX_RETRIES})...`);
+      // Exponential backoff
+      const delay = Math.pow(2, retries) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchApiKeyFromFirestore(forceRefresh, retries + 1);
+    }
+    
     return null;
   }
 };

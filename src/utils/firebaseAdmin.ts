@@ -17,16 +17,37 @@ export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> 
       throw new Error("API key must start with 'sk-'");
     }
     
-    // Store the API key in Firestore
-    await setDoc(doc(db, "apiKeys", "lovableAi"), {
-      key: apiKey,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    });
+    console.log("Attempting to store API key in Firestore...");
     
-    console.log("API key successfully stored in Firestore");
-    toast.success("API key successfully stored in Firestore");
-    return Promise.resolve();
+    // Store the API key in Firestore with better error handling
+    try {
+      await setDoc(doc(db, "apiKeys", "lovableAi"), {
+        key: apiKey,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Verify the key was stored correctly
+      const docRef = doc(db, "apiKeys", "lovableAi");
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        throw new Error("Failed to verify stored API key");
+      }
+      
+      console.log("API key successfully stored and verified in Firestore");
+      toast.success("API key successfully stored in Firestore");
+      return Promise.resolve();
+    } catch (firestoreError) {
+      console.error("Firestore operation error:", firestoreError);
+      
+      // Check if it's a permissions error
+      if (firestoreError.code === "permission-denied") {
+        throw new Error("Permission denied. Check Firestore security rules");
+      } else {
+        throw firestoreError;
+      }
+    }
   } catch (error) {
     console.error("Error storing API key in Firestore:", error);
     toast.error("Error storing API key: " + (error instanceof Error ? error.message : String(error)));
@@ -40,6 +61,7 @@ export const setOpenAIApiKeyInFirestore = async (apiKey: string): Promise<void> 
  */
 export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
   try {
+    console.log("Checking for API key in Firestore...");
     const docRef = doc(db, "apiKeys", "lovableAi");
     const docSnap = await getDoc(docRef);
     
@@ -52,6 +74,12 @@ export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
     }
   } catch (error) {
     console.error("Error checking API key in Firestore:", error);
+    
+    // Check if it's a permissions error and log accordingly
+    if (error.code === "permission-denied") {
+      console.error("Permission denied when accessing Firestore. Check security rules.");
+    }
+    
     return false;
   }
 };
@@ -62,6 +90,7 @@ export const checkOpenAIApiKeyInFirestore = async (): Promise<boolean> => {
  */
 export const getOpenAIApiKeyFromFirestore = async (): Promise<string | null> => {
   try {
+    console.log("Attempting to retrieve API key from Firestore...");
     const docRef = doc(db, "apiKeys", "lovableAi");
     const docSnap = await getDoc(docRef);
     
@@ -74,6 +103,12 @@ export const getOpenAIApiKeyFromFirestore = async (): Promise<string | null> => 
     }
   } catch (error) {
     console.error("Error retrieving API key from Firestore:", error);
+    
+    // Check if it's a permissions error and log accordingly
+    if (error.code === "permission-denied") {
+      console.error("Permission denied when accessing Firestore. Check security rules.");
+    }
+    
     return null;
   }
 };

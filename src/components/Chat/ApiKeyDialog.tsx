@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getApiKey, setApiKey, clearApiKey, validateApiKey, fetchApiKeyFromFirestore } from "@/utils/openaiUtils";
 import { toast } from "sonner";
-import { Key, Trash, Info, Database, CheckCircle, Loader2 } from "lucide-react";
+import { Key, Trash, Info, Database, CheckCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { setOpenAIApiKeyInFirestore, checkOpenAIApiKeyInFirestore } from "@/utils/firebaseAdmin";
 
@@ -26,6 +26,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
   const [firebaseSetupKey, setFirebaseSetupKey] = useState("");
   const [isFirebaseSetup, setIsFirebaseSetup] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(true);
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   // Check if Firebase key is available when dialog opens
   useEffect(() => {
@@ -58,9 +59,12 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
           } else {
             setApiKeyState("");
           }
+          
+          setSetupError(null);
         } catch (error) {
           console.error("Error checking Firebase key:", error);
           setFirebaseKeyAvailable(false);
+          setSetupError("Error checking Firebase key status: " + (error instanceof Error ? error.message : String(error)));
         } finally {
           setCheckingStatus(false);
         }
@@ -103,6 +107,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
     }
     
     setIsFirebaseSetup(true);
+    setSetupError(null);
     
     try {
       await setOpenAIApiKeyInFirestore(firebaseSetupKey.trim());
@@ -129,13 +134,16 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
           // Close the dialog after success
           setTimeout(() => onOpenChange(false), 1500);
         } else {
+          setSetupError("Key stored but couldn't be retrieved. Check Firestore security rules.");
           toast.warning("Key stored but couldn't be retrieved. Check Firestore security rules.");
         }
       } else {
+        setSetupError("Failed to store key in Firebase. Check console for details.");
         toast.error("Failed to store key in Firebase. Check console for details.");
       }
     } catch (error) {
       console.error("Error storing API key in Firebase:", error);
+      setSetupError("Error storing API key in Firebase: " + (error instanceof Error ? error.message : String(error)));
       toast.error("Error storing API key in Firebase. Check console for details.");
     } finally {
       setIsFirebaseSetup(false);
@@ -246,6 +254,15 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
                   For app administrators only: Store the OpenAI API key in Firebase to provide it to all users.
                 </p>
                 
+                {setupError && (
+                  <Alert className="bg-red-50 text-red-800 border-red-200">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      {setupError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 <div className="flex gap-2">
                   <Input
                     type="password"
@@ -270,6 +287,14 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({
                       "Store in Firebase"
                     )}
                   </Button>
+                </div>
+                <div className="text-xs text-gray-500">
+                  <p className="font-medium mb-1">Troubleshooting Firebase Storage Issues:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>Make sure your Firebase security rules allow writing to the 'apiKeys' collection</li>
+                    <li>Verify that your Firebase project is properly initialized</li>
+                    <li>Check your browser console for detailed error messages</li>
+                  </ul>
                 </div>
               </div>
             </div>
